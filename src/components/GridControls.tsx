@@ -16,6 +16,8 @@ interface GridControlsProps {
   zoom: number;
   setZoom: (zoom: number) => void;
   centerView: () => void;
+  labelSize: number;
+  setLabelSize: (size: number) => void;
 }
 
 export const GridControls: React.FC<GridControlsProps> = ({
@@ -32,6 +34,8 @@ export const GridControls: React.FC<GridControlsProps> = ({
   zoom,
   setZoom,
   centerView,
+  labelSize,
+  setLabelSize,
 }) => {
   return (
     <div
@@ -113,6 +117,30 @@ export const GridControls: React.FC<GridControlsProps> = ({
             >
               Show Labels
             </label>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <label
+              style={{ color: "#ccc", fontWeight: "500", minWidth: "80px" }}
+            >
+              Label Size:
+            </label>
+            <input
+              type="range"
+              min="1"
+              max="24"
+              value={labelSize}
+              onChange={(e) => setLabelSize(Number(e.target.value))}
+              style={styles.range}
+            />
+            <input
+              type="number"
+              min="1"
+              max="48"
+              value={labelSize}
+              onChange={(e) => setLabelSize(Number(e.target.value))}
+              style={{ ...styles.input, width: "60px" }}
+            />
           </div>
         </div>
       </div>

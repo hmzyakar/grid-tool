@@ -116,7 +116,8 @@ export const drawPaintedCells = (
   gridOffset: { x: number; y: number },
   gridSize: number,
   zoom: number,
-  canvasOffset: { x: number; y: number }
+  canvasOffset: { x: number; y: number },
+  cellLabels: Map<string, string[]>
 ): void => {
   // Visible area hesaplama
   const visibleLeft = -canvasOffset.x / zoom;
@@ -142,6 +143,25 @@ export const drawPaintedCells = (
     ) {
       ctx.fillStyle = cellColor + "80"; // 50% transparency
       ctx.fillRect(drawX, drawY, gridSize, gridSize);
+
+      // Eğer cell'in label'ı yoksa ortada koyu nokta çiz
+      const hasLabel =
+        cellLabels.has(cellKey) && cellLabels.get(cellKey)!.length > 0;
+      if (!hasLabel) {
+        // Ana rengin daha koyu versiyonu
+        const r = parseInt(cellColor.slice(1, 3), 16);
+        const g = parseInt(cellColor.slice(3, 5), 16);
+        const b = parseInt(cellColor.slice(5, 7), 16);
+        const darkerColor = `rgb(${Math.floor(r * 0.6)}, ${Math.floor(
+          g * 0.6
+        )}, ${Math.floor(b * 0.6)})`;
+
+        ctx.fillStyle = darkerColor;
+        const centerSize = Math.max(4, gridSize * 0.3);
+        const centerX = drawX + (gridSize - centerSize) / 2;
+        const centerY = drawY + (gridSize - centerSize) / 2;
+        ctx.fillRect(centerX, centerY, centerSize, centerSize);
+      }
     }
   });
 };
@@ -157,7 +177,8 @@ export const drawCellLabels = (
   isVisible: boolean,
   zoom: number,
   labelColor: string,
-  canvasOffset: { x: number; y: number }
+  canvasOffset: { x: number; y: number },
+  labelSize: number
 ): void => {
   if (!isVisible) return;
 
@@ -183,47 +204,26 @@ export const drawCellLabels = (
       drawY + gridSize >= visibleTop &&
       drawY <= visibleBottom
     ) {
-      // Dynamic font size based on grid size and zoom - smaller labels
-      const baseFontSize = Math.max(8, Math.min(gridSize * 0.25, 12));
-      const fontSize = Math.max(6, baseFontSize / Math.max(zoom * 0.5, 1));
+      // Label size calculation - simple and clean
+      const fontSize = Math.max(1, labelSize / Math.max(zoom * 0.7, 1));
 
-      ctx.font = `bold ${fontSize}px system-ui`;
+      ctx.font = `${fontSize}px system-ui`; // Bold kaldırıldı
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
       const cellColor = paintedCells.get(cellKey);
       const hasBackground = !!cellColor;
-
-      // Join labels with comma for display
       const labelText = labels.join(", ");
 
-      // Draw background for better visibility
+      // Sadece background yoksa koyu arka plan
       if (!hasBackground) {
         ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
         ctx.fillRect(drawX + 2, drawY + 2, gridSize - 4, gridSize - 4);
       }
 
-      // Draw shadow for better contrast
-      ctx.fillStyle = hasBackground
-        ? getContrastColor(cellColor) === "#ffffff"
-          ? "#00000080"
-          : "#ffffff80"
-        : "#00000080";
-      ctx.fillText(
-        labelText,
-        drawX + gridSize / 2 + 1,
-        drawY + gridSize / 2 + 1
-      );
-
-      // Draw text
+      // Sade text - gölge yok
       ctx.fillStyle = hasBackground ? getContrastColor(cellColor) : labelColor;
       ctx.fillText(labelText, drawX + gridSize / 2, drawY + gridSize / 2);
-
-      // Draw indicator for labeled cells
-      if (hasBackground) {
-        ctx.fillStyle = getContrastColor(cellColor);
-        ctx.fillRect(drawX + gridSize - 6, drawY + 2, 4, 4);
-      }
     }
   });
 };

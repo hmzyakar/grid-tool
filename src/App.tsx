@@ -46,6 +46,7 @@ const GridPainter: React.FC = () => {
   // UI state
   const [paintColor, setPaintColor] = useState(DEFAULT_COLORS[0].value);
   const [labelColor, setLabelColor] = useState("#ffffff");
+  const [labelSize, setLabelSize] = useState(8);
   const [gridSize, setGridSize] = useState(DEFAULT_GRID_SIZE);
   const [isGridVisible, setIsGridVisible] = useState(true);
   const [labelsVisible, setLabelsVisible] = useState(true);
@@ -211,7 +212,8 @@ const GridPainter: React.FC = () => {
       gridOffset,
       gridSize,
       zoom,
-      canvasOffset
+      canvasOffset,
+      cellLabels
     );
 
     // Draw cell labels
@@ -225,7 +227,8 @@ const GridPainter: React.FC = () => {
       labelsVisible,
       zoom,
       labelColor,
-      canvasOffset
+      canvasOffset,
+      labelSize
     );
 
     // Restore context
@@ -241,6 +244,7 @@ const GridPainter: React.FC = () => {
     cellLabels,
     labelsVisible,
     labelColor,
+    labelSize,
   ]);
 
   // Draw on changes
@@ -368,6 +372,12 @@ const GridPainter: React.FC = () => {
         // During continuous painting, use the determined action
         if (paintingAction === "erase") {
           newMap.delete(cellKey);
+          // Boya kaldırılınca label'ı da kaldır
+          setCellLabels((prevLabels) => {
+            const newLabelMap = new Map(prevLabels);
+            newLabelMap.delete(cellKey);
+            return newLabelMap;
+          });
         } else {
           newMap.set(cellKey, paintColor);
 
@@ -390,8 +400,13 @@ const GridPainter: React.FC = () => {
       } else {
         // Single click behavior
         if (existingColor === paintColor) {
-          // Same color clicked - remove the cell
+          // Same color clicked - remove the cell and its label
           newMap.delete(cellKey);
+          setCellLabels((prevLabels) => {
+            const newLabelMap = new Map(prevLabels);
+            newLabelMap.delete(cellKey);
+            return newLabelMap;
+          });
         } else {
           // Different color or unpainted cell - paint it
           newMap.set(cellKey, paintColor);
@@ -647,6 +662,8 @@ const GridPainter: React.FC = () => {
             zoom={zoom}
             setZoom={setZoom}
             centerView={centerView}
+            labelSize={labelSize}
+            setLabelSize={setLabelSize}
           />
 
           {/* Action Buttons - Near Canvas */}
