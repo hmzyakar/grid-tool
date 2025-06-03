@@ -9,6 +9,8 @@ interface GridControlsProps {
   setIsGridVisible: (visible: boolean) => void;
   labelsVisible: boolean;
   setLabelsVisible: (visible: boolean) => void;
+  backgroundVisible: boolean;
+  setBackgroundVisible: (visible: boolean) => void;
   gridOffset: { x: number; y: number };
   setGridOffset: (offset: { x: number; y: number }) => void;
   paintedCells: Map<string, string>;
@@ -27,6 +29,8 @@ export const GridControls: React.FC<GridControlsProps> = ({
   setIsGridVisible,
   labelsVisible,
   setLabelsVisible,
+  backgroundVisible,
+  setBackgroundVisible,
   gridOffset,
   setGridOffset,
   paintedCells,
@@ -85,6 +89,22 @@ export const GridControls: React.FC<GridControlsProps> = ({
               onChange={(e) => setGridSize(Number(e.target.value))}
               style={{ ...styles.input, width: "70px" }}
             />
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <input
+              type="checkbox"
+              id="backgroundVisible"
+              checked={backgroundVisible}
+              onChange={(e) => setBackgroundVisible(e.target.checked)}
+              style={{ width: "16px", height: "16px" }}
+            />
+            <label
+              htmlFor="backgroundVisible"
+              style={{ color: "#ccc", fontWeight: "500" }}
+            >
+              Show Background
+            </label>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

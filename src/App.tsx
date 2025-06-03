@@ -50,11 +50,13 @@ const GridPainter: React.FC = () => {
   const [gridSize, setGridSize] = useState(DEFAULT_GRID_SIZE);
   const [isGridVisible, setIsGridVisible] = useState(true);
   const [labelsVisible, setLabelsVisible] = useState(true);
+  const [backgroundVisible, setBackgroundVisible] = useState(true);
   const [gridOffset, setGridOffset] = useState({ x: 0, y: 0 });
   const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [backgroundImage, setBackgroundImage] =
     useState<HTMLImageElement | null>(null);
+  const [imageName, setImageName] = useState<string>("untitled");
 
   // Interaction state
   const [isDragging, setIsDragging] = useState(false);
@@ -188,7 +190,7 @@ const GridPainter: React.FC = () => {
     };
 
     // Draw background image
-    if (backgroundImage) {
+    if (backgroundImage && backgroundVisible) {
       const { width, height } = resizeImageToFit(backgroundImage);
       ctx.drawImage(backgroundImage, 0, 0, width, height);
     }
@@ -240,6 +242,7 @@ const GridPainter: React.FC = () => {
     gridSize,
     isGridVisible,
     backgroundImage,
+    backgroundVisible,
     paintedCells,
     cellLabels,
     labelsVisible,
@@ -496,6 +499,11 @@ const GridPainter: React.FC = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Extract filename without extension
+    const fileName =
+      file.name.substring(0, file.name.lastIndexOf(".")) || file.name;
+    setImageName(fileName);
+
     const img = new Image();
     img.onload = () => {
       setBackgroundImage(img);
@@ -524,6 +532,7 @@ const GridPainter: React.FC = () => {
           }[];
           colorPresets?: { [key: string]: string[] };
           metadata?: {
+            imageName?: string;
             gridSize?: number;
             zoom?: number;
             labelSize?: number;
@@ -531,6 +540,7 @@ const GridPainter: React.FC = () => {
             paintColor?: string;
             isGridVisible?: boolean;
             labelsVisible?: boolean;
+            backgroundVisible?: boolean;
             gridOffset?: { x: number; y: number };
             canvasOffset?: { x: number; y: number };
           };
@@ -576,6 +586,8 @@ const GridPainter: React.FC = () => {
 
         // Restore ALL metadata settings
         if (jsonData.metadata) {
+          if (jsonData.metadata.imageName)
+            setImageName(jsonData.metadata.imageName);
           if (jsonData.metadata.gridSize)
             setGridSize(jsonData.metadata.gridSize);
           if (jsonData.metadata.zoom) setZoom(jsonData.metadata.zoom);
@@ -589,6 +601,8 @@ const GridPainter: React.FC = () => {
             setIsGridVisible(jsonData.metadata.isGridVisible);
           if (typeof jsonData.metadata.labelsVisible === "boolean")
             setLabelsVisible(jsonData.metadata.labelsVisible);
+          if (typeof jsonData.metadata.backgroundVisible === "boolean")
+            setBackgroundVisible(jsonData.metadata.backgroundVisible);
           if (jsonData.metadata.gridOffset)
             setGridOffset(jsonData.metadata.gridOffset);
           if (jsonData.metadata.canvasOffset)
@@ -609,19 +623,33 @@ const GridPainter: React.FC = () => {
     event.target.value = "";
   };
 
+  // Generate smart filename
+  const generateFileName = (extension: string) => {
+    // Build filename parts
+    const parts = [
+      "gridpainter",
+      imageName,
+      `image-${backgroundVisible ? "on" : "off"}`,
+      `grid${gridSize}-${isGridVisible ? "on" : "off"}`,
+      `labels${labelSize}-${labelsVisible ? "on" : "off"}`,
+      `zoom${Math.round(zoom * 100)}`,
+      `p${paintedCells.size}l${cellLabels.size}`,
+    ];
+
+    return parts.join("_") + extension;
+  };
+
   // Export functions
   const handleExportPNG = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    const filename = generateFileName(".png");
     const link = document.createElement("a");
-    link.download = `grid-painter-${
-      new Date().toISOString().split("T")[0]
-    }.png`;
+    link.download = filename;
     link.href = canvas.toDataURL();
     link.click();
 
-    // Scroll to export section
     setTimeout(() => {
       exportSectionRef.current?.scrollIntoView({ behavior: "smooth" });
     }, 100);
@@ -629,15 +657,15 @@ const GridPainter: React.FC = () => {
 
   const handleExportJSON = () => {
     const exportData = generateExportData();
+    const filename = generateFileName(".json");
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
       type: "application/json",
     });
     const link = document.createElement("a");
-    link.download = `grid-data-${new Date().toISOString().split("T")[0]}.json`;
+    link.download = filename;
     link.href = URL.createObjectURL(blob);
     link.click();
 
-    // Scroll to export section
     setTimeout(() => {
       exportSectionRef.current?.scrollIntoView({ behavior: "smooth" });
     }, 100);
@@ -679,6 +707,7 @@ const GridPainter: React.FC = () => {
     return {
       metadata: {
         exportDate: new Date().toISOString(),
+        imageName,
         gridSize,
         zoom,
         labelSize,
@@ -686,6 +715,7 @@ const GridPainter: React.FC = () => {
         paintColor,
         isGridVisible,
         labelsVisible,
+        backgroundVisible,
         gridOffset,
         canvasOffset,
         totalCells: data.length,
@@ -781,6 +811,8 @@ const GridPainter: React.FC = () => {
             setIsGridVisible={setIsGridVisible}
             labelsVisible={labelsVisible}
             setLabelsVisible={setLabelsVisible}
+            backgroundVisible={backgroundVisible}
+            setBackgroundVisible={setBackgroundVisible}
             gridOffset={gridOffset}
             setGridOffset={setGridOffset}
             paintedCells={paintedCells}
