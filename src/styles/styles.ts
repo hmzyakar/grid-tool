@@ -9,8 +9,8 @@ export const styles = {
     color: "#ffffff",
     fontFamily: "system-ui, -apple-system, sans-serif",
     boxSizing: "border-box",
-    width: "100vw",
-    overflow: "auto",
+    width: "100%",
+    overflowX: "hidden",
   } as React.CSSProperties,
 
   container: {
@@ -20,6 +20,8 @@ export const styles = {
     fontFamily: "system-ui, -apple-system, sans-serif",
     margin: 0,
     padding: 0,
+    width: "100%",
+    overflowX: "hidden",
   } as React.CSSProperties,
 
   mainCard: {
@@ -30,6 +32,7 @@ export const styles = {
     border: "1px solid #333",
     minHeight: "100vh",
     boxSizing: "border-box",
+    width: "100%",
   } as React.CSSProperties,
 
   title: {
@@ -42,6 +45,7 @@ export const styles = {
     padding: "20px",
     border: "1px solid #404040",
     marginBottom: "20px",
+    boxSizing: "border-box",
   } as React.CSSProperties,
 
   button: {
@@ -56,6 +60,7 @@ export const styles = {
     display: "flex",
     alignItems: "center",
     gap: "8px",
+    boxSizing: "border-box",
   } as React.CSSProperties,
 
   primaryButton: {
@@ -84,6 +89,7 @@ export const styles = {
     backgroundColor: "#333",
     color: "#fff",
     fontSize: "14px",
+    boxSizing: "border-box",
   } as React.CSSProperties,
 
   range: {
@@ -92,17 +98,6 @@ export const styles = {
     backgroundColor: "#404040",
     outline: "none",
     cursor: "pointer",
-  } as React.CSSProperties,
-
-  canvasContainer: {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: "24px",
-    padding: "20px",
-    backgroundColor: "#1a1a1a",
-    border: "1px solid #333",
-    position: "relative" as const,
   } as React.CSSProperties,
 
   modal: {
@@ -117,6 +112,7 @@ export const styles = {
     justifyContent: "center",
     zIndex: 50,
     padding: "16px",
+    boxSizing: "border-box",
   } as React.CSSProperties,
 
   modalContent: {
@@ -125,6 +121,7 @@ export const styles = {
     padding: "32px",
     width: "384px",
     maxWidth: "100%",
+    boxSizing: "border-box",
   } as React.CSSProperties,
 
   dataContainer: {
@@ -134,12 +131,14 @@ export const styles = {
     border: "1px solid #333",
     maxWidth: "1400px",
     margin: "32px auto 0",
+    boxSizing: "border-box",
   } as React.CSSProperties,
 
   dataBox: {
     backgroundColor: "#262626",
     padding: "20px",
     border: "1px solid #404040",
+    boxSizing: "border-box",
   } as React.CSSProperties,
 
   textarea: {
@@ -152,13 +151,13 @@ export const styles = {
     backgroundColor: "#1a1a1a",
     color: "#fff",
     resize: "none" as const,
-    boxSizing: "border-box" as const,
+    boxSizing: "border-box",
   } as React.CSSProperties,
 
   instructionsBox: {
-    marginTop: "32px",
     backgroundColor: "#262626",
     border: "1px solid #404040",
     padding: "24px",
+    boxSizing: "border-box",
   } as React.CSSProperties,
 };

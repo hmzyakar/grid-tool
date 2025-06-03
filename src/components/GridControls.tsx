@@ -12,7 +12,9 @@ interface GridControlsProps {
   gridOffset: { x: number; y: number };
   setGridOffset: (offset: { x: number; y: number }) => void;
   paintedCells: Map<string, string>;
-  cellLabels: Map<string, string>;
+  cellLabels: Map<string, string[]>;
+  zoom: number;
+  setZoom: (zoom: number) => void;
 }
 
 export const GridControls: React.FC<GridControlsProps> = ({
@@ -26,6 +28,8 @@ export const GridControls: React.FC<GridControlsProps> = ({
   setGridOffset,
   paintedCells,
   cellLabels,
+  zoom,
+  setZoom,
 }) => {
   return (
     <div
@@ -124,10 +128,67 @@ export const GridControls: React.FC<GridControlsProps> = ({
           }}
         >
           <Icons.ZoomIn size={18} />
-          Statistics
+          View Controls
         </h3>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Zoom Control */}
+          <div>
+            <label
+              style={{
+                color: "#ccc",
+                fontSize: "14px",
+                marginBottom: "8px",
+                display: "block",
+              }}
+            >
+              Zoom: {Math.round(zoom * 100)}%
+            </label>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <button
+                onClick={() => setZoom(Math.max(0.1, zoom - 0.1))}
+                style={{
+                  ...styles.button,
+                  padding: "6px 8px",
+                  fontSize: "12px",
+                }}
+              >
+                <Icons.ZoomOut size={14} />
+              </button>
+              <input
+                type="range"
+                min="0.1"
+                max="10"
+                step="0.1"
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                style={styles.range}
+              />
+              <button
+                onClick={() => setZoom(Math.min(10, zoom + 0.1))}
+                style={{
+                  ...styles.button,
+                  padding: "6px 8px",
+                  fontSize: "12px",
+                }}
+              >
+                <Icons.ZoomIn size={14} />
+              </button>
+              <button
+                onClick={() => setZoom(1)}
+                style={{
+                  ...styles.button,
+                  ...styles.primaryButton,
+                  padding: "6px 12px",
+                  fontSize: "12px",
+                }}
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+
+          {/* Statistics */}
           <div
             style={{
               display: "flex",

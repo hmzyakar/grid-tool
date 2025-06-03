@@ -25,8 +25,8 @@ export const MIN_GRID_SIZE = 1;
 export const MAX_GRID_SIZE = 500;
 
 export const DEFAULT_ZOOM = 1;
-export const MIN_ZOOM = 0.2;
-export const MAX_ZOOM = 5;
+export const MIN_ZOOM = 0.1;
+export const MAX_ZOOM = 10;
 export const ZOOM_STEP = 0.1;
 
 export const DEFAULT_CANVAS_SIZE = {
@@ -34,14 +34,7 @@ export const DEFAULT_CANVAS_SIZE = {
   height: 600,
 };
 
-export const LONG_PRESS_DURATION = 300; // milliseconds
-
 export const MAX_LABEL_LENGTH = 100;
-
-export const EXPORT_DATE_FORMAT = {
-  date: () => new Date().toISOString().split("T")[0],
-  time: () => new Date().toTimeString().split(" ")[0],
-};
 
 export const CANVAS_SETTINGS = {
   pixelRatio: () => window.devicePixelRatio || 1,

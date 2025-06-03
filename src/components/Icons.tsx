@@ -53,6 +53,21 @@ export const Icons = {
     </svg>
   ),
 
+  RotateCw: ({ size = 20, style }: IconProps) => (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      style={style}
+    >
+      <polyline points="23,4 23,10 17,10" />
+      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+    </svg>
+  ),
+
   Palette: ({ size = 20, style }: IconProps) => (
     <svg
       width={size}
@@ -153,21 +168,6 @@ export const Icons = {
     </svg>
   ),
 
-  RotateCw: ({ size = 20, style }: IconProps) => (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      style={style}
-    >
-      <polyline points="23,4 23,10 17,10" />
-      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-    </svg>
-  ),
-
   Settings: ({ size = 20, style }: IconProps) => (
     <svg
       width={size}
@@ -180,6 +180,21 @@ export const Icons = {
     >
       <circle cx="12" cy="12" r="3" />
       <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" />
+    </svg>
+  ),
+
+  Tag: ({ size = 20, style }: IconProps) => (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      style={style}
+    >
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+      <line x1="7" y1="7" x2="7.01" y2="7" />
     </svg>
   ),
 };

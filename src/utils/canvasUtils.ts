@@ -1,4 +1,4 @@
-// Canvas utility functions for Grid Painter
+// Canvas utility functions for Grid Painter Pro
 
 export const coordsToKey = (row: number, col: number): string =>
   `${row},${col}`;
@@ -120,8 +120,7 @@ export const drawPaintedCells = (
       gridSize
     );
 
-    // Daha saydam ve kenarlık yok
-    ctx.fillStyle = cellColor + "80"; // 50% saydamlık
+    ctx.fillStyle = cellColor + "80"; // 50% transparency
     if (
       drawX + gridSize >= 0 &&
       drawX <= canvasSize.width &&
@@ -129,23 +128,24 @@ export const drawPaintedCells = (
       drawY <= canvasSize.height
     ) {
       ctx.fillRect(drawX, drawY, gridSize, gridSize);
-      // Kenarlık kaldırıldı
     }
   });
 };
 
 export const drawCellLabels = (
   ctx: CanvasRenderingContext2D,
-  cellLabels: Map<string, string>,
+  cellLabels: Map<string, string[]>,
   paintedCells: Map<string, string>,
   canvasSize: { width: number; height: number },
   gridOffset: { x: number; y: number },
   gridSize: number,
-  isVisible: boolean
+  isVisible: boolean,
+  zoom: number,
+  labelColor: string
 ): void => {
   if (!isVisible) return;
 
-  cellLabels.forEach((label, cellKey) => {
+  cellLabels.forEach((labels, cellKey) => {
     const { row, col } = keyToCoords(cellKey);
     const { x: drawX, y: drawY } = gridToCanvasCoords(
       row,
@@ -160,21 +160,47 @@ export const drawCellLabels = (
       drawY + gridSize >= 0 &&
       drawY <= canvasSize.height
     ) {
-      const fontSize = Math.max(10, Math.min(gridSize * 0.4, 18));
+      // Dynamic font size based on grid size and zoom - smaller labels
+      const baseFontSize = Math.max(8, Math.min(gridSize * 0.25, 12));
+      const fontSize = Math.max(6, baseFontSize / Math.max(zoom * 0.5, 1));
+
       ctx.font = `bold ${fontSize}px system-ui`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
       const cellColor = paintedCells.get(cellKey);
-      const textColor = cellColor ? getContrastColor(cellColor) : "#ffffff";
+      const hasBackground = !!cellColor;
 
-      // Draw shadow
-      ctx.fillStyle = textColor === "#ffffff" ? "#00000080" : "#ffffff80";
-      ctx.fillText(label, drawX + gridSize / 2 + 1, drawY + gridSize / 2 + 1);
+      // Join labels with comma for display
+      const labelText = labels.join(", ");
+
+      // Draw background for better visibility
+      if (!hasBackground) {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+        ctx.fillRect(drawX + 2, drawY + 2, gridSize - 4, gridSize - 4);
+      }
+
+      // Draw shadow for better contrast
+      ctx.fillStyle = hasBackground
+        ? getContrastColor(cellColor) === "#ffffff"
+          ? "#00000080"
+          : "#ffffff80"
+        : "#00000080";
+      ctx.fillText(
+        labelText,
+        drawX + gridSize / 2 + 1,
+        drawY + gridSize / 2 + 1
+      );
 
       // Draw text
-      ctx.fillStyle = textColor;
-      ctx.fillText(label, drawX + gridSize / 2, drawY + gridSize / 2);
+      ctx.fillStyle = hasBackground ? getContrastColor(cellColor) : labelColor;
+      ctx.fillText(labelText, drawX + gridSize / 2, drawY + gridSize / 2);
+
+      // Draw indicator for labeled cells
+      if (hasBackground) {
+        ctx.fillStyle = getContrastColor(cellColor);
+        ctx.fillRect(drawX + gridSize - 6, drawY + 2, 4, 4);
+      }
     }
   });
 };
