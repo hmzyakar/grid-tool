@@ -505,6 +505,110 @@ const GridPainter: React.FC = () => {
     img.src = URL.createObjectURL(file);
   };
 
+  // JSON import
+  const handleJSONImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const jsonData: {
+          cells: {
+            row: number;
+            col: number;
+            color?: string;
+            labels?: string[];
+            isPainted: boolean;
+            hasLabel: boolean;
+          }[];
+          colorPresets?: { [key: string]: string[] };
+          metadata?: {
+            gridSize?: number;
+            zoom?: number;
+            labelSize?: number;
+            labelColor?: string;
+            paintColor?: string;
+            isGridVisible?: boolean;
+            labelsVisible?: boolean;
+            gridOffset?: { x: number; y: number };
+            canvasOffset?: { x: number; y: number };
+          };
+        } = JSON.parse(e.target?.result as string);
+
+        // Validate JSON structure
+        if (!jsonData.cells || !Array.isArray(jsonData.cells)) {
+          alert("Invalid JSON format");
+          return;
+        }
+
+        // Restore painted cells and labels
+        const newPaintedCells = new Map<string, string>();
+        const newCellLabels = new Map<string, string[]>();
+
+        jsonData.cells.forEach((cell) => {
+          const cellKey = coordsToKey(cell.row, cell.col);
+
+          if (cell.isPainted && cell.color) {
+            newPaintedCells.set(cellKey, cell.color);
+          }
+
+          if (cell.hasLabel && cell.labels && cell.labels.length > 0) {
+            newCellLabels.set(cellKey, cell.labels);
+          }
+        });
+
+        // Restore color presets
+        const newColorPresets = new Map<string, string[]>();
+        if (jsonData.colorPresets) {
+          for (const color in jsonData.colorPresets) {
+            if (jsonData.colorPresets.hasOwnProperty(color)) {
+              const labels = jsonData.colorPresets[color] as string[];
+              newColorPresets.set(color, labels);
+            }
+          }
+        }
+
+        // Apply all restored data
+        setPaintedCells(newPaintedCells);
+        setCellLabels(newCellLabels);
+        setColorPresets(newColorPresets);
+
+        // Restore ALL metadata settings
+        if (jsonData.metadata) {
+          if (jsonData.metadata.gridSize)
+            setGridSize(jsonData.metadata.gridSize);
+          if (jsonData.metadata.zoom) setZoom(jsonData.metadata.zoom);
+          if (jsonData.metadata.labelSize)
+            setLabelSize(jsonData.metadata.labelSize);
+          if (jsonData.metadata.labelColor)
+            setLabelColor(jsonData.metadata.labelColor);
+          if (jsonData.metadata.paintColor)
+            setPaintColor(jsonData.metadata.paintColor);
+          if (typeof jsonData.metadata.isGridVisible === "boolean")
+            setIsGridVisible(jsonData.metadata.isGridVisible);
+          if (typeof jsonData.metadata.labelsVisible === "boolean")
+            setLabelsVisible(jsonData.metadata.labelsVisible);
+          if (jsonData.metadata.gridOffset)
+            setGridOffset(jsonData.metadata.gridOffset);
+          if (jsonData.metadata.canvasOffset)
+            setCanvasOffset(jsonData.metadata.canvasOffset);
+        }
+
+        alert(
+          `Successfully imported ${newPaintedCells.size} painted cells and ${newCellLabels.size} labeled cells!\nAll settings restored perfectly!`
+        );
+      } catch (error) {
+        alert("Error parsing JSON file");
+        console.error("JSON import error:", error);
+      }
+    };
+
+    reader.readAsText(file);
+    // Reset file input
+    event.target.value = "";
+  };
+
   // Export functions
   const handleExportPNG = () => {
     const canvas = canvasRef.current;
@@ -577,6 +681,13 @@ const GridPainter: React.FC = () => {
         exportDate: new Date().toISOString(),
         gridSize,
         zoom,
+        labelSize,
+        labelColor,
+        paintColor,
+        isGridVisible,
+        labelsVisible,
+        gridOffset,
+        canvasOffset,
         totalCells: data.length,
         paintedCells: paintedCells.size,
         labeledCells: cellLabels.size,
@@ -629,6 +740,21 @@ const GridPainter: React.FC = () => {
               >
                 <Icons.Upload size={16} />
                 Upload Image
+              </label>
+
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleJSONImport}
+                style={{ display: "none" }}
+                id="jsonImport"
+              />
+              <label
+                htmlFor="jsonImport"
+                style={{ ...styles.button, ...styles.primaryButton }}
+              >
+                <Icons.FileText size={16} />
+                Import JSON
               </label>
             </div>
           </div>
