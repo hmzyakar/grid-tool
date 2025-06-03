@@ -197,4 +197,20 @@ export const Icons = {
       <line x1="7" y1="7" x2="7.01" y2="7" />
     </svg>
   ),
+
+  Target: ({ size = 20, style }: IconProps) => (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      style={style}
+    >
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" />
+    </svg>
+  ),
 };

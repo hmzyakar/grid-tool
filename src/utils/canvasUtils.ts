@@ -1,4 +1,4 @@
-// Canvas utility functions for Grid Painter Pro
+// Canvas utility functions for Grid Painter Pro - FIXED VERSION
 
 export const coordsToKey = (row: number, col: number): string =>
   `${row},${col}`;
@@ -16,13 +16,15 @@ export const canvasToGridCoords = (
   gridOffset: { x: number; y: number },
   gridSize: number
 ): { col: number; row: number } => {
+  // Canvas koordinatlarını dünya koordinatlarına çevir
   const worldX = (canvasX - canvasOffset.x) / zoom;
   const worldY = (canvasY - canvasOffset.y) / zoom;
-  const rawCol = Math.floor((worldX - gridOffset.x) / gridSize);
-  const rawRow = Math.floor((worldY - gridOffset.y) / gridSize);
-  const topLeftCol = Math.floor((0 - gridOffset.x) / gridSize);
-  const topLeftRow = Math.floor((0 - gridOffset.y) / gridSize);
-  return { col: rawCol - topLeftCol, row: rawRow - topLeftRow };
+
+  // Grid koordinatlarını hesapla
+  const col = Math.floor((worldX - gridOffset.x) / gridSize);
+  const row = Math.floor((worldY - gridOffset.y) / gridSize);
+
+  return { col, row };
 };
 
 export const gridToCanvasCoords = (
@@ -31,13 +33,9 @@ export const gridToCanvasCoords = (
   gridOffset: { x: number; y: number },
   gridSize: number
 ): { x: number; y: number } => {
-  const topLeftCol = Math.floor((0 - gridOffset.x) / gridSize);
-  const topLeftRow = Math.floor((0 - gridOffset.y) / gridSize);
-  const realCol = col + topLeftCol;
-  const realRow = row + topLeftRow;
   return {
-    x: realCol * gridSize + gridOffset.x,
-    y: realRow * gridSize + gridOffset.y,
+    x: col * gridSize + gridOffset.x,
+    y: row * gridSize + gridOffset.y,
   };
 };
 
@@ -51,8 +49,8 @@ export const getContrastColor = (hexColor: string): string => {
 
 export const resizeImageToFit = (
   img: HTMLImageElement,
-  maxWidth: number = 800,
-  maxHeight: number = 600
+  maxWidth: number = 1000, // Artırıldı
+  maxHeight: number = 700 // Artırıldı
 ): { width: number; height: number } => {
   const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
   return {
@@ -61,56 +59,71 @@ export const resizeImageToFit = (
   };
 };
 
+// FIXED: Grid drawing function with proper zoom handling
 export const drawCanvasGrid = (
   ctx: CanvasRenderingContext2D,
   canvasSize: { width: number; height: number },
   gridOffset: { x: number; y: number },
   gridSize: number,
-  isVisible: boolean
+  isVisible: boolean,
+  zoom: number,
+  canvasOffset: { x: number; y: number }
 ): void => {
   if (!isVisible) return;
 
   ctx.strokeStyle = "#666666";
-  ctx.lineWidth = 0.5;
+  ctx.lineWidth = 0.5 / zoom; // Zoom'a göre çizgi kalınlığı ayarla
   ctx.globalAlpha = 0.7;
 
-  const startX = gridOffset.x % gridSize;
-  const startY = gridOffset.y % gridSize;
-  const verticalLines = Math.ceil(canvasSize.width / gridSize) + 2;
-  const horizontalLines = Math.ceil(canvasSize.height / gridSize) + 2;
+  // Visible area hesaplama
+  const visibleLeft = -canvasOffset.x / zoom;
+  const visibleTop = -canvasOffset.y / zoom;
+  const visibleRight = visibleLeft + canvasSize.width / zoom;
+  const visibleBottom = visibleTop + canvasSize.height / zoom;
 
-  // Draw vertical lines
-  for (let i = 0; i < verticalLines; i++) {
-    const x = startX + i * gridSize;
-    if (x >= -1 && x <= canvasSize.width + 1) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvasSize.height);
-      ctx.stroke();
-    }
-  }
+  // Grid başlangıç noktalarını hesapla
+  const startCol = Math.floor((visibleLeft - gridOffset.x) / gridSize);
+  const endCol = Math.ceil((visibleRight - gridOffset.x) / gridSize);
+  const startRow = Math.floor((visibleTop - gridOffset.y) / gridSize);
+  const endRow = Math.ceil((visibleBottom - gridOffset.y) / gridSize);
 
-  // Draw horizontal lines
-  for (let i = 0; i < horizontalLines; i++) {
-    const y = startY + i * gridSize;
-    if (y >= -1 && y <= canvasSize.height + 1) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvasSize.width, y);
-      ctx.stroke();
-    }
+  // Vertical lines
+  ctx.beginPath();
+  for (let col = startCol; col <= endCol; col++) {
+    const x = col * gridSize + gridOffset.x;
+    ctx.moveTo(x, visibleTop);
+    ctx.lineTo(x, visibleBottom);
   }
+  ctx.stroke();
+
+  // Horizontal lines
+  ctx.beginPath();
+  for (let row = startRow; row <= endRow; row++) {
+    const y = row * gridSize + gridOffset.y;
+    ctx.moveTo(visibleLeft, y);
+    ctx.lineTo(visibleRight, y);
+  }
+  ctx.stroke();
 
   ctx.globalAlpha = 1;
 };
 
+// FIXED: Painted cells drawing with proper zoom handling
 export const drawPaintedCells = (
   ctx: CanvasRenderingContext2D,
   paintedCells: Map<string, string>,
   canvasSize: { width: number; height: number },
   gridOffset: { x: number; y: number },
-  gridSize: number
+  gridSize: number,
+  zoom: number,
+  canvasOffset: { x: number; y: number }
 ): void => {
+  // Visible area hesaplama
+  const visibleLeft = -canvasOffset.x / zoom;
+  const visibleTop = -canvasOffset.y / zoom;
+  const visibleRight = visibleLeft + canvasSize.width / zoom;
+  const visibleBottom = visibleTop + canvasSize.height / zoom;
+
   paintedCells.forEach((cellColor, cellKey) => {
     const { row, col } = keyToCoords(cellKey);
     const { x: drawX, y: drawY } = gridToCanvasCoords(
@@ -120,18 +133,20 @@ export const drawPaintedCells = (
       gridSize
     );
 
-    ctx.fillStyle = cellColor + "80"; // 50% transparency
+    // Sadece görünür alandaki hücreleri çiz
     if (
-      drawX + gridSize >= 0 &&
-      drawX <= canvasSize.width &&
-      drawY + gridSize >= 0 &&
-      drawY <= canvasSize.height
+      drawX + gridSize >= visibleLeft &&
+      drawX <= visibleRight &&
+      drawY + gridSize >= visibleTop &&
+      drawY <= visibleBottom
     ) {
+      ctx.fillStyle = cellColor + "80"; // 50% transparency
       ctx.fillRect(drawX, drawY, gridSize, gridSize);
     }
   });
 };
 
+// FIXED: Cell labels drawing with proper zoom handling
 export const drawCellLabels = (
   ctx: CanvasRenderingContext2D,
   cellLabels: Map<string, string[]>,
@@ -141,9 +156,16 @@ export const drawCellLabels = (
   gridSize: number,
   isVisible: boolean,
   zoom: number,
-  labelColor: string
+  labelColor: string,
+  canvasOffset: { x: number; y: number }
 ): void => {
   if (!isVisible) return;
+
+  // Visible area hesaplama
+  const visibleLeft = -canvasOffset.x / zoom;
+  const visibleTop = -canvasOffset.y / zoom;
+  const visibleRight = visibleLeft + canvasSize.width / zoom;
+  const visibleBottom = visibleTop + canvasSize.height / zoom;
 
   cellLabels.forEach((labels, cellKey) => {
     const { row, col } = keyToCoords(cellKey);
@@ -154,11 +176,12 @@ export const drawCellLabels = (
       gridSize
     );
 
+    // Sadece görünür alandaki hücreleri çiz
     if (
-      drawX + gridSize >= 0 &&
-      drawX <= canvasSize.width &&
-      drawY + gridSize >= 0 &&
-      drawY <= canvasSize.height
+      drawX + gridSize >= visibleLeft &&
+      drawX <= visibleRight &&
+      drawY + gridSize >= visibleTop &&
+      drawY <= visibleBottom
     ) {
       // Dynamic font size based on grid size and zoom - smaller labels
       const baseFontSize = Math.max(8, Math.min(gridSize * 0.25, 12));

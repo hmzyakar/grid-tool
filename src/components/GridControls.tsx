@@ -15,6 +15,7 @@ interface GridControlsProps {
   cellLabels: Map<string, string[]>;
   zoom: number;
   setZoom: (zoom: number) => void;
+  centerView: () => void;
 }
 
 export const GridControls: React.FC<GridControlsProps> = ({
@@ -30,6 +31,7 @@ export const GridControls: React.FC<GridControlsProps> = ({
   cellLabels,
   zoom,
   setZoom,
+  centerView,
 }) => {
   return (
     <div
@@ -184,6 +186,18 @@ export const GridControls: React.FC<GridControlsProps> = ({
                 }}
               >
                 Reset
+              </button>
+              <button
+                onClick={centerView}
+                style={{
+                  ...styles.button,
+                  ...styles.primaryButton,
+                  padding: "6px 12px",
+                  fontSize: "12px",
+                }}
+              >
+                <Icons.Target size={14} />
+                Center
               </button>
             </div>
           </div>

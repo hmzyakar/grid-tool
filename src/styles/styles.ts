@@ -25,7 +25,7 @@ export const styles = {
   } as React.CSSProperties,
 
   mainCard: {
-    maxWidth: "1400px",
+    maxWidth: "1600px", // Genişletildi
     margin: "0 auto",
     padding: "20px",
     backgroundColor: "#1a1a1a",
@@ -129,7 +129,7 @@ export const styles = {
     padding: "32px",
     backgroundColor: "#1a1a1a",
     border: "1px solid #333",
-    maxWidth: "1400px",
+    maxWidth: "1600px", // Genişletildi
     margin: "32px auto 0",
     boxSizing: "border-box",
   } as React.CSSProperties,

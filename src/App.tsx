@@ -75,7 +75,6 @@ const GridPainter: React.FC = () => {
   const [showPresetModal, setShowPresetModal] = useState(false);
   const [presetColor, setPresetColor] = useState("");
   const [presetLabels, setPresetLabels] = useState("");
-  const [isSpacePressed, setIsSpacePressed] = useState(false);
 
   const exportSectionRef = useRef<HTMLDivElement>(null);
 
@@ -110,31 +109,6 @@ const GridPainter: React.FC = () => {
     };
   }, []);
 
-  // Keyboard shortcuts - simplified (only space)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space") {
-        e.preventDefault();
-        setIsSpacePressed(true);
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === "Space") {
-        setIsSpacePressed(false);
-        setIsDragging(false);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-    };
-  }, []);
-
   // Mouse wheel zoom
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -151,6 +125,42 @@ const GridPainter: React.FC = () => {
     canvas.addEventListener("wheel", handleWheel, { passive: false });
     return () => canvas.removeEventListener("wheel", handleWheel);
   }, []);
+
+  // Pan sınırları hesaplama
+  const getPanLimits = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !backgroundImage) return null;
+
+    const { width: imgWidth, height: imgHeight } =
+      resizeImageToFit(backgroundImage);
+    const maxOffset = Math.max(imgWidth, imgHeight) * zoom;
+
+    return {
+      minX: -maxOffset,
+      maxX: maxOffset,
+      minY: -maxOffset,
+      maxY: maxOffset,
+    };
+  }, [backgroundImage, zoom]);
+
+  // Center view function
+  const centerView = useCallback(() => {
+    if (backgroundImage) {
+      const { width: imgWidth, height: imgHeight } =
+        resizeImageToFit(backgroundImage);
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const centerX = (canvas.width - imgWidth * zoom) / 2;
+      const centerY = (canvas.height - imgHeight * zoom) / 2;
+
+      setCanvasOffset({ x: centerX, y: centerY });
+    } else {
+      setCanvasOffset({ x: 0, y: 0 });
+    }
+    setGridOffset({ x: 0, y: 0 });
+    setZoom(1);
+  }, [backgroundImage, zoom]);
 
   // Drawing function
   const draw = useCallback(() => {
@@ -170,6 +180,12 @@ const GridPainter: React.FC = () => {
     ctx.scale(zoom, zoom);
     ctx.translate(canvasOffset.x / zoom, canvasOffset.y / zoom);
 
+    // Calculate canvas size in world coordinates
+    const worldCanvasSize = {
+      width: canvas.width,
+      height: canvas.height,
+    };
+
     // Draw background image
     if (backgroundImage) {
       const { width, height } = resizeImageToFit(backgroundImage);
@@ -179,32 +195,37 @@ const GridPainter: React.FC = () => {
     // Draw grid
     drawCanvasGrid(
       ctx,
-      { width: canvas.width / zoom, height: canvas.height / zoom },
+      worldCanvasSize,
       gridOffset,
       gridSize,
-      isGridVisible
+      isGridVisible,
+      zoom,
+      canvasOffset
     );
 
     // Draw painted cells
     drawPaintedCells(
       ctx,
       paintedCells,
-      { width: canvas.width / zoom, height: canvas.height / zoom },
+      worldCanvasSize,
       gridOffset,
-      gridSize
+      gridSize,
+      zoom,
+      canvasOffset
     );
 
-    // Draw cell labels with dynamic sizing
+    // Draw cell labels
     drawCellLabels(
       ctx,
       cellLabels,
       paintedCells,
-      { width: canvas.width / zoom, height: canvas.height / zoom },
+      worldCanvasSize,
       gridOffset,
       gridSize,
       labelsVisible,
       zoom,
-      labelColor
+      labelColor,
+      canvasOffset
     );
 
     // Restore context
@@ -230,7 +251,7 @@ const GridPainter: React.FC = () => {
   // Mouse handlers
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (e.button === 2) return; // Ignore right click here
-    if (e.button === 1) return; // Ignore middle click - only space+drag for panning
+    if (e.button === 1) return; // Ignore middle click
 
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -240,8 +261,8 @@ const GridPainter: React.FC = () => {
 
     setLastMousePos({ x: canvasX, y: canvasY });
 
-    if (isSpacePressed) {
-      // Space + left click - start dragging
+    if (e.ctrlKey || e.metaKey) {
+      // Ctrl + left click - start dragging
       setIsDragging(true);
     } else if (e.button === 0) {
       // Left click - start painting
@@ -279,7 +300,18 @@ const GridPainter: React.FC = () => {
     if (isDragging) {
       const deltaX = canvasX - lastMousePos.x;
       const deltaY = canvasY - lastMousePos.y;
-      setCanvasOffset((prev) => ({ x: prev.x + deltaX, y: prev.y + deltaY }));
+
+      // Pan sınırlarını uygula
+      const limits = getPanLimits();
+      let newX = canvasOffset.x + deltaX;
+      let newY = canvasOffset.y + deltaY;
+
+      if (limits) {
+        newX = Math.max(limits.minX, Math.min(limits.maxX, newX));
+        newY = Math.max(limits.minY, Math.min(limits.maxY, newY));
+      }
+
+      setCanvasOffset({ x: newX, y: newY });
     } else if (isPainting) {
       paintCell(canvasX, canvasY);
     }
@@ -450,7 +482,11 @@ const GridPainter: React.FC = () => {
     if (!file) return;
 
     const img = new Image();
-    img.onload = () => setBackgroundImage(img);
+    img.onload = () => {
+      setBackgroundImage(img);
+      // Resim yüklendiğinde otomatik olarak ortala
+      setTimeout(() => centerView(), 100);
+    };
     img.src = URL.createObjectURL(file);
   };
 
@@ -547,7 +583,7 @@ const GridPainter: React.FC = () => {
             Grid Painter Pro
           </h1>
 
-          {/* Action Buttons */}
+          {/* Upload Section */}
           <div style={styles.section}>
             <h3
               style={{
@@ -560,8 +596,8 @@ const GridPainter: React.FC = () => {
                 gap: "8px",
               }}
             >
-              <Icons.Settings size={18} />
-              Actions
+              <Icons.Upload size={18} />
+              Upload Image
             </h3>
 
             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
@@ -579,46 +615,6 @@ const GridPainter: React.FC = () => {
                 <Icons.Upload size={16} />
                 Upload Image
               </label>
-
-              <button
-                onClick={handleExportPNG}
-                style={{ ...styles.button, ...styles.successButton }}
-              >
-                <Icons.Download size={16} />
-                Export PNG
-              </button>
-
-              <button
-                onClick={handleExportJSON}
-                style={{ ...styles.button, ...styles.successButton }}
-              >
-                <Icons.FileText size={16} />
-                Export JSON
-              </button>
-
-              <button
-                onClick={() => handleClearRequest("painted")}
-                style={{ ...styles.button, ...styles.warningButton }}
-              >
-                <Icons.RotateCcw size={16} />
-                Clear Painted
-              </button>
-
-              <button
-                onClick={() => handleClearRequest("labels")}
-                style={{ ...styles.button, ...styles.warningButton }}
-              >
-                <Icons.Type size={16} />
-                Clear Labels
-              </button>
-
-              <button
-                onClick={() => handleClearRequest("all")}
-                style={{ ...styles.button, ...styles.dangerButton }}
-              >
-                <Icons.X size={16} />
-                Clear All
-              </button>
             </div>
           </div>
 
@@ -650,7 +646,74 @@ const GridPainter: React.FC = () => {
             cellLabels={cellLabels}
             zoom={zoom}
             setZoom={setZoom}
+            centerView={centerView}
           />
+
+          {/* Action Buttons - Near Canvas */}
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              justifyContent: "center",
+              marginBottom: "16px",
+              padding: "16px",
+              backgroundColor: "#262626",
+              border: "1px solid #404040",
+              flexWrap: "wrap",
+            }}
+          >
+            {/* Export Buttons */}
+            <button
+              onClick={handleExportPNG}
+              style={{ ...styles.button, ...styles.successButton }}
+            >
+              <Icons.Download size={16} />
+              Export PNG
+            </button>
+
+            <button
+              onClick={handleExportJSON}
+              style={{ ...styles.button, ...styles.successButton }}
+            >
+              <Icons.FileText size={16} />
+              Export JSON
+            </button>
+
+            {/* Separator */}
+            <div
+              style={{
+                width: "1px",
+                backgroundColor: "#555",
+                margin: "0 8px",
+                alignSelf: "stretch",
+              }}
+            />
+
+            {/* Clear Buttons */}
+            <button
+              onClick={() => handleClearRequest("painted")}
+              style={{ ...styles.button, ...styles.warningButton }}
+            >
+              <Icons.RotateCcw size={16} />
+              Clear Painted
+            </button>
+
+            <button
+              onClick={() => handleClearRequest("labels")}
+              style={{ ...styles.button, ...styles.warningButton }}
+            >
+              <Icons.Type size={16} />
+              Clear Labels
+            </button>
+
+            <button
+              onClick={() => handleClearRequest("all")}
+              style={{ ...styles.button, ...styles.dangerButton }}
+            >
+              <Icons.X size={16} />
+              Clear All
+            </button>
+          </div>
 
           {/* Canvas */}
           <div
@@ -684,8 +747,6 @@ const GridPainter: React.FC = () => {
                     ? "grabbing"
                     : isPainting
                     ? "crosshair"
-                    : isSpacePressed
-                    ? "grab"
                     : "default",
                   backgroundColor: "#000000",
                   display: "block",
@@ -725,10 +786,14 @@ const GridPainter: React.FC = () => {
                 <strong>Right Click:</strong> Add/edit labels
               </li>
               <li>
-                <strong>Space + Left Click + Drag:</strong> Pan canvas
+                <strong>Ctrl + Left Click + Drag:</strong> Pan canvas (with
+                limits)
               </li>
               <li>
                 <strong>Ctrl + Mouse Wheel:</strong> Zoom in/out (up to 1000%)
+              </li>
+              <li>
+                <strong>Center View Button:</strong> Reset view to image center
               </li>
               <li>
                 <strong>Color Presets:</strong> Create preset labels for colors

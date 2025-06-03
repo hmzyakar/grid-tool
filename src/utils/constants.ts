@@ -29,9 +29,10 @@ export const MIN_ZOOM = 0.1;
 export const MAX_ZOOM = 10;
 export const ZOOM_STEP = 0.1;
 
+// UPDATED: Büyütülmüş canvas boyutu
 export const DEFAULT_CANVAS_SIZE = {
-  width: 800,
-  height: 600,
+  width: 1200, // 800'den 1200'e çıkarıldı
+  height: 800, // 600'dan 800'e çıkarıldı
 };
 
 export const MAX_LABEL_LENGTH = 100;
