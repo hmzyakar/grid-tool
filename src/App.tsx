@@ -1,13 +1,17 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Icons } from "./components/Icons";
 import { ColorPalette, Color } from "./components/ColorPalette";
-import { GridControls } from "./components/GridControls";
+import { FloorManagement } from "./components/FloorManagement";
+import { GridSettings } from "./components/GridSettings";
+import { ViewControls } from "./components/ViewControls";
 import { styles } from "./styles/styles";
 import {
-  DEFAULT_COLORS,
+  NAVIGATION_COLORS,
   DEFAULT_GRID_SIZE,
   DEFAULT_CANVAS_SIZE,
   UI_MESSAGES,
+  FloorData,
+  POI_CATEGORIES,
 } from "./utils/constants";
 import {
   coordsToKey,
@@ -17,7 +21,12 @@ import {
   drawCanvasGrid,
   drawPaintedCells,
   drawCellLabels,
+  drawConnectionLines,
   resizeImageToFit,
+  generateNavigationGridCSV,
+  generatePOICSV,
+  generateVerticalConnectionsCSV,
+  downloadCSV,
 } from "./utils/canvasUtils";
 
 interface CellData {
@@ -28,11 +37,41 @@ interface CellData {
   labels: string[];
   isPainted: boolean;
   hasLabel: boolean;
+  category?: string;
 }
 
 const GridPainter: React.FC = () => {
   // Core state
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Floor management - starts empty
+  const [currentFloor, setCurrentFloor] = useState<{
+    name: string;
+    number: number;
+  } | null>(null);
+  const [floors, setFloors] = useState<Map<string, FloorData>>(new Map());
+  const [floorCounter, setFloorCounter] = useState(0);
+
+  // POI categories per floor
+  const [poiCategories, setPOICategories] = useState<
+    Map<string, Map<string, string>>
+  >(new Map());
+
+  // Current floor data (derived from floors map)
+  const currentFloorKey = currentFloor
+    ? `${currentFloor.number}_${currentFloor.name}`
+    : "";
+  const currentFloorData = currentFloor
+    ? floors.get(currentFloorKey) || {
+        name: currentFloor.name,
+        number: currentFloor.number,
+        paintedCells: new Map(),
+        cellLabels: new Map(),
+        colorPresets: new Map(),
+        poiCategories: new Map(),
+      }
+    : null;
+
   const [paintedCells, setPaintedCells] = useState<Map<string, string>>(
     new Map()
   );
@@ -44,13 +83,18 @@ const GridPainter: React.FC = () => {
   );
 
   // UI state
-  const [paintColor, setPaintColor] = useState(DEFAULT_COLORS[0].value);
+  const [paintColor, setPaintColor] = useState(NAVIGATION_COLORS[0].value);
   const [labelColor, setLabelColor] = useState("#ffffff");
   const [labelSize, setLabelSize] = useState(8);
   const [gridSize, setGridSize] = useState(DEFAULT_GRID_SIZE);
   const [isGridVisible, setIsGridVisible] = useState(true);
   const [labelsVisible, setLabelsVisible] = useState(true);
   const [backgroundVisible, setBackgroundVisible] = useState(true);
+  const [showConnections, setShowConnections] = useState(true);
+  const [showPrimaryConnections, setShowPrimaryConnections] = useState(true);
+  const [showSecondaryConnections, setShowSecondaryConnections] =
+    useState(true);
+  const [showCornerIndicators, setShowCornerIndicators] = useState(false);
   const [gridOffset, setGridOffset] = useState({ x: 0, y: 0 });
   const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -71,6 +115,7 @@ const GridPainter: React.FC = () => {
     col: number;
   } | null>(null);
   const [tempLabel, setTempLabel] = useState("");
+  const [tempPOICategory, setTempPOICategory] = useState("");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [clearType, setClearType] = useState<"all" | "painted" | "labels">(
     "all"
@@ -80,6 +125,109 @@ const GridPainter: React.FC = () => {
   const [presetLabels, setPresetLabels] = useState("");
 
   const exportSectionRef = useRef<HTMLDivElement>(null);
+
+  // Floor Management Functions
+  const createFloor = useCallback(
+    (name: string, number: number) => {
+      const newFloorKey = `${number}_${name}`;
+
+      if (floors.has(newFloorKey)) {
+        alert("A floor with this number and name already exists!");
+        return;
+      }
+
+      const newFloorData: FloorData = {
+        name,
+        number,
+        paintedCells: new Map(),
+        cellLabels: new Map(),
+        colorPresets: new Map(),
+        poiCategories: new Map(),
+      };
+
+      setFloors((prev) => new Map(prev).set(newFloorKey, newFloorData));
+      setPOICategories((prev) => new Map(prev).set(newFloorKey, new Map()));
+      setFloorCounter((prev) => Math.max(prev, number + 1));
+
+      // Switch to new floor if this is first floor
+      if (floors.size === 0) {
+        setCurrentFloor({ name, number });
+        setPaintedCells(new Map());
+        setCellLabels(new Map());
+        setColorPresets(new Map());
+      }
+    },
+    [floors]
+  );
+
+  const switchFloor = useCallback(
+    (floorKey: string) => {
+      // Save current floor data
+      if (currentFloor) {
+        const currentKey = `${currentFloor.number}_${currentFloor.name}`;
+        setFloors((prev) => {
+          const newFloors = new Map(prev);
+          const existing = newFloors.get(currentKey) || {
+            name: currentFloor.name,
+            number: currentFloor.number,
+            paintedCells: new Map(),
+            cellLabels: new Map(),
+            colorPresets: new Map(),
+            poiCategories: new Map(),
+          };
+          newFloors.set(currentKey, {
+            ...existing,
+            paintedCells: new Map(paintedCells),
+            cellLabels: new Map(cellLabels),
+            colorPresets: new Map(colorPresets),
+          });
+          return newFloors;
+        });
+      }
+
+      // Switch to new floor
+      const targetFloor = floors.get(floorKey);
+      if (targetFloor) {
+        setCurrentFloor({ name: targetFloor.name, number: targetFloor.number });
+        setPaintedCells(new Map(targetFloor.paintedCells));
+        setCellLabels(new Map(targetFloor.cellLabels));
+        setColorPresets(new Map(targetFloor.colorPresets));
+      }
+    },
+    [currentFloor, paintedCells, cellLabels, colorPresets, floors]
+  );
+
+  const deleteFloor = useCallback(
+    (floorKey: string) => {
+      const newFloors = new Map(floors);
+      newFloors.delete(floorKey);
+      setFloors(newFloors);
+
+      const newPOICategories = new Map(poiCategories);
+      newPOICategories.delete(floorKey);
+      setPOICategories(newPOICategories);
+
+      // If we deleted the current floor or this was the last floor
+      if (newFloors.size === 0) {
+        // No floors left
+        setCurrentFloor(null);
+        setPaintedCells(new Map());
+        setCellLabels(new Map());
+        setColorPresets(new Map());
+      } else {
+        // Switch to first available floor
+        const firstFloor = Array.from(newFloors.entries())[0];
+        if (firstFloor) {
+          const [key, floorData] = firstFloor;
+          setCurrentFloor({ name: floorData.name, number: floorData.number });
+          setPaintedCells(new Map(floorData.paintedCells));
+          setCellLabels(new Map(floorData.cellLabels));
+          setColorPresets(new Map(floorData.colorPresets));
+        }
+      }
+    },
+    [floors, poiCategories]
+  );
 
   // Canvas setup
   useEffect(() => {
@@ -96,7 +244,7 @@ const GridPainter: React.FC = () => {
     }
   }, []);
 
-  // Global body styles to prevent horizontal scrollbar
+  // Global body styles
   useEffect(() => {
     document.body.style.margin = "0";
     document.body.style.padding = "0";
@@ -104,7 +252,6 @@ const GridPainter: React.FC = () => {
     document.body.style.boxSizing = "border-box";
 
     return () => {
-      // Cleanup on unmount
       document.body.style.margin = "";
       document.body.style.padding = "";
       document.body.style.overflowX = "";
@@ -129,7 +276,7 @@ const GridPainter: React.FC = () => {
     return () => canvas.removeEventListener("wheel", handleWheel);
   }, []);
 
-  // Pan sınırları hesaplama
+  // Pan limits
   const getPanLimits = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !backgroundImage) return null;
@@ -173,17 +320,11 @@ const GridPainter: React.FC = () => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Save context
     ctx.save();
-
-    // Apply zoom and offset
     ctx.scale(zoom, zoom);
     ctx.translate(canvasOffset.x / zoom, canvasOffset.y / zoom);
 
-    // Calculate canvas size in world coordinates
     const worldCanvasSize = {
       width: canvas.width,
       height: canvas.height,
@@ -218,6 +359,21 @@ const GridPainter: React.FC = () => {
       cellLabels
     );
 
+    // Draw connection lines
+    drawConnectionLines(
+      ctx,
+      paintedCells,
+      worldCanvasSize,
+      gridOffset,
+      gridSize,
+      showConnections,
+      zoom,
+      canvasOffset,
+      showPrimaryConnections,
+      showSecondaryConnections,
+      showCornerIndicators
+    );
+
     // Draw cell labels
     drawCellLabels(
       ctx,
@@ -233,7 +389,6 @@ const GridPainter: React.FC = () => {
       labelSize
     );
 
-    // Restore context
     ctx.restore();
   }, [
     zoom,
@@ -248,6 +403,7 @@ const GridPainter: React.FC = () => {
     labelsVisible,
     labelColor,
     labelSize,
+    showConnections,
   ]);
 
   // Draw on changes
@@ -257,8 +413,10 @@ const GridPainter: React.FC = () => {
 
   // Mouse handlers
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (e.button === 2) return; // Ignore right click here
-    if (e.button === 1) return; // Ignore middle click
+    if (!currentFloor) return; // No action if no floor
+
+    if (e.button === 2) return;
+    if (e.button === 1) return;
 
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -269,13 +427,10 @@ const GridPainter: React.FC = () => {
     setLastMousePos({ x: canvasX, y: canvasY });
 
     if (e.ctrlKey || e.metaKey) {
-      // Ctrl + left click - start dragging
       setIsDragging(true);
     } else if (e.button === 0) {
-      // Left click - start painting
       setIsPainting(true);
 
-      // Determine action based on first click
       const { col, row } = canvasToGridCoords(
         canvasX,
         canvasY,
@@ -308,7 +463,6 @@ const GridPainter: React.FC = () => {
       const deltaX = canvasX - lastMousePos.x;
       const deltaY = canvasY - lastMousePos.y;
 
-      // Pan sınırlarını uygula
       const limits = getPanLimits();
       let newX = canvasOffset.x + deltaX;
       let newY = canvasOffset.y + deltaY;
@@ -319,7 +473,7 @@ const GridPainter: React.FC = () => {
       }
 
       setCanvasOffset({ x: newX, y: newY });
-    } else if (isPainting) {
+    } else if (isPainting && currentFloor) {
       paintCell(canvasX, canvasY);
     }
 
@@ -333,6 +487,8 @@ const GridPainter: React.FC = () => {
 
   const handleRightClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
+
+    if (!currentFloor) return;
 
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -352,11 +508,18 @@ const GridPainter: React.FC = () => {
     const cellKey = coordsToKey(row, col);
     const existingLabels = cellLabels.get(cellKey) || [];
     setTempLabel(existingLabels.join(", "));
+
+    // Set POI category if exists
+    const currentCategories = poiCategories.get(currentFloorKey) || new Map();
+    setTempPOICategory(currentCategories.get(cellKey) || "");
+
     setShowLabelModal(true);
   };
 
   // Paint cell function
   const paintCell = (canvasX: number, canvasY: number) => {
+    if (!currentFloor) return;
+
     const { col, row } = canvasToGridCoords(
       canvasX,
       canvasY,
@@ -372,19 +535,41 @@ const GridPainter: React.FC = () => {
       const existingColor = newMap.get(cellKey);
 
       if (isPainting) {
-        // During continuous painting, use the determined action
         if (paintingAction === "erase") {
           newMap.delete(cellKey);
-          // Boya kaldırılınca label'ı da kaldır
           setCellLabels((prevLabels) => {
             const newLabelMap = new Map(prevLabels);
             newLabelMap.delete(cellKey);
             return newLabelMap;
           });
+          // Remove POI category
+          setPOICategories((prevCategories) => {
+            const newCategories = new Map(prevCategories);
+            const currentFloorCategories =
+              newCategories.get(currentFloorKey) || new Map();
+            currentFloorCategories.delete(cellKey);
+            newCategories.set(currentFloorKey, currentFloorCategories);
+            return newCategories;
+          });
         } else {
           newMap.set(cellKey, paintColor);
 
-          // Apply preset labels if this is a new paint (not recolor)
+          // Handle special colors
+          const colorConfig = NAVIGATION_COLORS.find(
+            (c) => c.value === paintColor
+          );
+          if (colorConfig?.defaultLabel !== undefined) {
+            if (colorConfig.defaultLabel === "") {
+              // Walkway, elevator, stairs, escalator - empty label
+              setCellLabels((prevLabels) => {
+                const newLabelMap = new Map(prevLabels);
+                newLabelMap.delete(cellKey);
+                return newLabelMap;
+              });
+            }
+          }
+
+          // Apply preset labels if available
           if (!existingColor) {
             const presetLabelsForColor = colorPresets.get(paintColor);
             if (presetLabelsForColor && presetLabelsForColor.length > 0) {
@@ -401,20 +586,37 @@ const GridPainter: React.FC = () => {
           }
         }
       } else {
-        // Single click behavior
         if (existingColor === paintColor) {
-          // Same color clicked - remove the cell and its label
           newMap.delete(cellKey);
           setCellLabels((prevLabels) => {
             const newLabelMap = new Map(prevLabels);
             newLabelMap.delete(cellKey);
             return newLabelMap;
           });
+          // Remove POI category
+          setPOICategories((prevCategories) => {
+            const newCategories = new Map(prevCategories);
+            const currentFloorCategories =
+              newCategories.get(currentFloorKey) || new Map();
+            currentFloorCategories.delete(cellKey);
+            newCategories.set(currentFloorKey, currentFloorCategories);
+            return newCategories;
+          });
         } else {
-          // Different color or unpainted cell - paint it
           newMap.set(cellKey, paintColor);
 
-          // Apply preset labels if available and it's a new paint (not recolor)
+          // Handle special colors
+          const colorConfig = NAVIGATION_COLORS.find(
+            (c) => c.value === paintColor
+          );
+          if (colorConfig?.defaultLabel === "") {
+            setCellLabels((prevLabels) => {
+              const newLabelMap = new Map(prevLabels);
+              newLabelMap.delete(cellKey);
+              return newLabelMap;
+            });
+          }
+
           if (!existingColor) {
             const presetLabelsForColor = colorPresets.get(paintColor);
             if (presetLabelsForColor && presetLabelsForColor.length > 0) {
@@ -438,7 +640,7 @@ const GridPainter: React.FC = () => {
 
   // Label modal handlers
   const handleLabelSubmit = () => {
-    if (!labelModalCell) return;
+    if (!labelModalCell || !currentFloor) return;
 
     const cellKey = coordsToKey(labelModalCell.row, labelModalCell.col);
     const newLabels = tempLabel
@@ -456,9 +658,23 @@ const GridPainter: React.FC = () => {
       return newMap;
     });
 
+    // Handle POI category
+    const cellColor = paintedCells.get(cellKey);
+    if (cellColor === "#dc2626" && tempPOICategory) {
+      setPOICategories((prevCategories) => {
+        const newCategories = new Map(prevCategories);
+        const currentFloorCategories =
+          newCategories.get(currentFloorKey) || new Map();
+        currentFloorCategories.set(cellKey, tempPOICategory);
+        newCategories.set(currentFloorKey, currentFloorCategories);
+        return newCategories;
+      });
+    }
+
     setShowLabelModal(false);
     setLabelModalCell(null);
     setTempLabel("");
+    setTempPOICategory("");
   };
 
   // Clear functions
@@ -470,6 +686,14 @@ const GridPainter: React.FC = () => {
   const handleClearConfirm = () => {
     if (clearType === "all" || clearType === "painted") {
       setPaintedCells(new Map());
+      // Clear POI categories for current floor
+      if (currentFloor) {
+        setPOICategories((prev) => {
+          const newCategories = new Map(prev);
+          newCategories.set(currentFloorKey, new Map());
+          return newCategories;
+        });
+      }
     }
     if (clearType === "all" || clearType === "labels") {
       setCellLabels(new Map());
@@ -499,7 +723,6 @@ const GridPainter: React.FC = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Extract filename without extension
     const fileName =
       file.name.substring(0, file.name.lastIndexOf(".")) || file.name;
     setImageName(fileName);
@@ -507,13 +730,12 @@ const GridPainter: React.FC = () => {
     const img = new Image();
     img.onload = () => {
       setBackgroundImage(img);
-      // Resim yüklendiğinde otomatik olarak ortala
       setTimeout(() => centerView(), 100);
     };
     img.src = URL.createObjectURL(file);
   };
 
-  // JSON import
+  // JSON import/export for floors
   const handleJSONImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -521,97 +743,77 @@ const GridPainter: React.FC = () => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const jsonData: {
-          cells: {
-            row: number;
-            col: number;
-            color?: string;
-            labels?: string[];
-            isPainted: boolean;
-            hasLabel: boolean;
-          }[];
-          colorPresets?: { [key: string]: string[] };
-          metadata?: {
-            imageName?: string;
-            gridSize?: number;
-            zoom?: number;
-            labelSize?: number;
-            labelColor?: string;
-            paintColor?: string;
-            isGridVisible?: boolean;
-            labelsVisible?: boolean;
-            backgroundVisible?: boolean;
-            gridOffset?: { x: number; y: number };
-            canvasOffset?: { x: number; y: number };
-          };
-        } = JSON.parse(e.target?.result as string);
+        const jsonData = JSON.parse(e.target?.result as string);
 
-        // Validate JSON structure
-        if (!jsonData.cells || !Array.isArray(jsonData.cells)) {
-          alert("Invalid JSON format");
-          return;
-        }
+        // Validate and restore floors
+        if (jsonData.floors) {
+          const newFloors = new Map<string, FloorData>();
+          const newPOICategories = new Map<string, Map<string, string>>();
 
-        // Restore painted cells and labels
-        const newPaintedCells = new Map<string, string>();
-        const newCellLabels = new Map<string, string[]>();
-
-        jsonData.cells.forEach((cell) => {
-          const cellKey = coordsToKey(cell.row, cell.col);
-
-          if (cell.isPainted && cell.color) {
-            newPaintedCells.set(cellKey, cell.color);
-          }
-
-          if (cell.hasLabel && cell.labels && cell.labels.length > 0) {
-            newCellLabels.set(cellKey, cell.labels);
-          }
-        });
-
-        // Restore color presets
-        const newColorPresets = new Map<string, string[]>();
-        if (jsonData.colorPresets) {
-          for (const color in jsonData.colorPresets) {
-            if (jsonData.colorPresets.hasOwnProperty(color)) {
-              const labels = jsonData.colorPresets[color] as string[];
-              newColorPresets.set(color, labels);
+          Object.entries(jsonData.floors).forEach(
+            ([key, data]: [string, any]) => {
+              const floorData: FloorData = {
+                name: data.name,
+                number: data.number,
+                paintedCells: new Map(data.paintedCells || []),
+                cellLabels: new Map(data.cellLabels || []),
+                colorPresets: new Map(data.colorPresets || []),
+                poiCategories: new Map(data.poiCategories || []),
+              };
+              newFloors.set(key, floorData);
+              newPOICategories.set(key, new Map(data.poiCategories || []));
             }
+          );
+
+          setFloors(newFloors);
+          setPOICategories(newPOICategories);
+
+          // Restore current floor
+          if (jsonData.currentFloor && newFloors.size > 0) {
+            setCurrentFloor(jsonData.currentFloor);
+            const currentData = newFloors.get(
+              `${jsonData.currentFloor.number}_${jsonData.currentFloor.name}`
+            );
+            if (currentData) {
+              setPaintedCells(new Map(currentData.paintedCells));
+              setCellLabels(new Map(currentData.cellLabels));
+              setColorPresets(new Map(currentData.colorPresets));
+            }
+          } else if (newFloors.size > 0) {
+            // Set first floor as current
+            const firstFloor = Array.from(newFloors.values())[0];
+            setCurrentFloor({
+              name: firstFloor.name,
+              number: firstFloor.number,
+            });
+            setPaintedCells(new Map(firstFloor.paintedCells));
+            setCellLabels(new Map(firstFloor.cellLabels));
+            setColorPresets(new Map(firstFloor.colorPresets));
           }
+
+          // Restore other settings
+          if (jsonData.metadata) {
+            const meta = jsonData.metadata;
+            if (meta.imageName) setImageName(meta.imageName);
+            if (meta.gridSize) setGridSize(meta.gridSize);
+            if (meta.zoom) setZoom(meta.zoom);
+            if (meta.labelSize) setLabelSize(meta.labelSize);
+            if (meta.labelColor) setLabelColor(meta.labelColor);
+            if (meta.paintColor) setPaintColor(meta.paintColor);
+            if (typeof meta.isGridVisible === "boolean")
+              setIsGridVisible(meta.isGridVisible);
+            if (typeof meta.labelsVisible === "boolean")
+              setLabelsVisible(meta.labelsVisible);
+            if (typeof meta.backgroundVisible === "boolean")
+              setBackgroundVisible(meta.backgroundVisible);
+            if (typeof meta.showConnections === "boolean")
+              setShowConnections(meta.showConnections);
+            if (meta.gridOffset) setGridOffset(meta.gridOffset);
+            if (meta.canvasOffset) setCanvasOffset(meta.canvasOffset);
+          }
+
+          alert(`Successfully imported ${newFloors.size} floors!`);
         }
-
-        // Apply all restored data
-        setPaintedCells(newPaintedCells);
-        setCellLabels(newCellLabels);
-        setColorPresets(newColorPresets);
-
-        // Restore ALL metadata settings
-        if (jsonData.metadata) {
-          if (jsonData.metadata.imageName)
-            setImageName(jsonData.metadata.imageName);
-          if (jsonData.metadata.gridSize)
-            setGridSize(jsonData.metadata.gridSize);
-          if (jsonData.metadata.zoom) setZoom(jsonData.metadata.zoom);
-          if (jsonData.metadata.labelSize)
-            setLabelSize(jsonData.metadata.labelSize);
-          if (jsonData.metadata.labelColor)
-            setLabelColor(jsonData.metadata.labelColor);
-          if (jsonData.metadata.paintColor)
-            setPaintColor(jsonData.metadata.paintColor);
-          if (typeof jsonData.metadata.isGridVisible === "boolean")
-            setIsGridVisible(jsonData.metadata.isGridVisible);
-          if (typeof jsonData.metadata.labelsVisible === "boolean")
-            setLabelsVisible(jsonData.metadata.labelsVisible);
-          if (typeof jsonData.metadata.backgroundVisible === "boolean")
-            setBackgroundVisible(jsonData.metadata.backgroundVisible);
-          if (jsonData.metadata.gridOffset)
-            setGridOffset(jsonData.metadata.gridOffset);
-          if (jsonData.metadata.canvasOffset)
-            setCanvasOffset(jsonData.metadata.canvasOffset);
-        }
-
-        alert(
-          `Successfully imported ${newPaintedCells.size} painted cells and ${newCellLabels.size} labeled cells!\nAll settings restored perfectly!`
-        );
       } catch (error) {
         alert("Error parsing JSON file");
         console.error("JSON import error:", error);
@@ -619,112 +821,149 @@ const GridPainter: React.FC = () => {
     };
 
     reader.readAsText(file);
-    // Reset file input
     event.target.value = "";
   };
 
-  // Generate smart filename
-  const generateFileName = (extension: string) => {
-    // Build filename parts
+  // Export functions
+  const generateFileName = (extension: string, suffix: string = "") => {
     const parts = [
-      "gridpainter",
+      "grid-painter",
       imageName,
-      `image-${backgroundVisible ? "on" : "off"}`,
-      `grid${gridSize}-${isGridVisible ? "on" : "off"}`,
-      `labels${labelSize}-${labelsVisible ? "on" : "off"}`,
-      `zoom${Math.round(zoom * 100)}`,
-      `p${paintedCells.size}l${cellLabels.size}`,
-    ];
+      currentFloor ? `floor-${currentFloor.number}` : "no-floor",
+      suffix,
+    ].filter(Boolean);
 
     return parts.join("_") + extension;
   };
 
-  // Export functions
-  const handleExportPNG = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  const handleExportCSV = (type: "current" | "all") => {
+    if (floors.size === 0) {
+      alert("No floors to export!");
+      return;
+    }
 
-    const filename = generateFileName(".png");
-    const link = document.createElement("a");
-    link.download = filename;
-    link.href = canvas.toDataURL();
-    link.click();
+    // Save current floor data first
+    if (currentFloor) {
+      const currentKey = `${currentFloor.number}_${currentFloor.name}`;
+      const updatedFloors = new Map(floors);
+      const existing = updatedFloors.get(currentKey) || {
+        name: currentFloor.name,
+        number: currentFloor.number,
+        paintedCells: new Map(),
+        cellLabels: new Map(),
+        colorPresets: new Map(),
+        poiCategories: new Map(),
+      };
+      updatedFloors.set(currentKey, {
+        ...existing,
+        paintedCells: new Map(paintedCells),
+        cellLabels: new Map(cellLabels),
+        colorPresets: new Map(colorPresets),
+      });
 
-    setTimeout(() => {
-      exportSectionRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
+      const timestamp = new Date().toISOString().slice(0, 10);
+      const suffix = type === "current" ? "current" : "all";
+
+      // Generate and download navigation grid CSV
+      const navCSV = generateNavigationGridCSV(
+        updatedFloors,
+        type,
+        currentFloor
+      );
+      downloadCSV(navCSV, `navigation_grid_${timestamp}_${suffix}.csv`);
+
+      // Generate and download POI CSV
+      const poiCSV = generatePOICSV(
+        updatedFloors,
+        poiCategories,
+        type,
+        currentFloor
+      );
+      downloadCSV(poiCSV, `points_of_interest_${timestamp}_${suffix}.csv`);
+
+      // Generate and download vertical connections CSV (always all floors)
+      const connectionsCSV = generateVerticalConnectionsCSV(updatedFloors);
+      downloadCSV(connectionsCSV, `vertical_connections_${timestamp}.csv`);
+
+      setTimeout(() => {
+        exportSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    }
   };
 
   const handleExportJSON = () => {
-    const exportData = generateExportData();
-    const filename = generateFileName(".json");
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: "application/json",
-    });
-    const link = document.createElement("a");
-    link.download = filename;
-    link.href = URL.createObjectURL(blob);
-    link.click();
+    if (floors.size === 0) {
+      alert("No floors to export!");
+      return;
+    }
 
-    setTimeout(() => {
-      exportSectionRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
-  };
-
-  // Generate export data
-  const generateExportData = () => {
-    const data: CellData[] = [];
-    const allCells = new Set<string>();
-
-    // Add all painted cell keys
-    paintedCells.forEach((_, key) => allCells.add(key));
-    // Add all labeled cell keys
-    cellLabels.forEach((_, key) => allCells.add(key));
-
-    allCells.forEach((cellKey) => {
-      const { row, col } = keyToCoords(cellKey);
-      const color = paintedCells.get(cellKey);
-      const labels = cellLabels.get(cellKey) || [];
-      const colorObj = DEFAULT_COLORS.find((c) => c.value === color);
-
-      data.push({
-        row,
-        col,
-        color: color || "",
-        colorName: colorObj?.name || "",
-        labels,
-        isPainted: !!color,
-        hasLabel: labels.length > 0,
+    // Save current floor data first
+    if (currentFloor) {
+      const currentKey = `${currentFloor.number}_${currentFloor.name}`;
+      const updatedFloors = new Map(floors);
+      const existing = updatedFloors.get(currentKey) || {
+        name: currentFloor.name,
+        number: currentFloor.number,
+        paintedCells: new Map(),
+        cellLabels: new Map(),
+        colorPresets: new Map(),
+        poiCategories: new Map(),
+      };
+      updatedFloors.set(currentKey, {
+        ...existing,
+        paintedCells: new Map(paintedCells),
+        cellLabels: new Map(cellLabels),
+        colorPresets: new Map(colorPresets),
       });
-    });
 
-    // Convert colorPresets Map to object manually
-    const colorPresetsObj: { [key: string]: string[] } = {};
-    colorPresets.forEach((value, key) => {
-      colorPresetsObj[key] = value;
-    });
+      const exportData = {
+        metadata: {
+          exportDate: new Date().toISOString(),
+          imageName,
+          gridSize,
+          zoom,
+          labelSize,
+          labelColor,
+          paintColor,
+          isGridVisible,
+          labelsVisible,
+          backgroundVisible,
+          showConnections,
+          gridOffset,
+          canvasOffset,
+          totalFloors: updatedFloors.size,
+        },
+        currentFloor,
+        floors: Object.fromEntries(
+          Array.from(updatedFloors.entries()).map(([key, floor]) => [
+            key,
+            {
+              name: floor.name,
+              number: floor.number,
+              paintedCells: Array.from(floor.paintedCells.entries()),
+              cellLabels: Array.from(floor.cellLabels.entries()),
+              colorPresets: Array.from(floor.colorPresets.entries()),
+              poiCategories: Array.from(
+                (poiCategories.get(key) || new Map()).entries()
+              ),
+            },
+          ])
+        ),
+      };
 
-    return {
-      metadata: {
-        exportDate: new Date().toISOString(),
-        imageName,
-        gridSize,
-        zoom,
-        labelSize,
-        labelColor,
-        paintColor,
-        isGridVisible,
-        labelsVisible,
-        backgroundVisible,
-        gridOffset,
-        canvasOffset,
-        totalCells: data.length,
-        paintedCells: paintedCells.size,
-        labeledCells: cellLabels.size,
-      },
-      colorPresets: colorPresetsObj,
-      cells: data.sort((a, b) => a.row - b.row || a.col - b.col),
-    };
+      const filename = generateFileName(".json", "project");
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: "application/json",
+      });
+      const link = document.createElement("a");
+      link.download = filename;
+      link.href = URL.createObjectURL(blob);
+      link.click();
+
+      setTimeout(() => {
+        exportSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    }
   };
 
   return (
@@ -736,10 +975,10 @@ const GridPainter: React.FC = () => {
               size={32}
               style={{ verticalAlign: "middle", marginRight: "12px" }}
             />
-            Grid Painter Pro
+            Grid Painter
           </h1>
 
-          {/* Upload Section */}
+          {/* Upload Section - Full Width */}
           <div style={styles.section}>
             <h3
               style={{
@@ -753,7 +992,7 @@ const GridPainter: React.FC = () => {
               }}
             >
               <Icons.Upload size={18} />
-              Upload Image
+              Upload & Import
             </h3>
 
             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
@@ -784,47 +1023,140 @@ const GridPainter: React.FC = () => {
                 style={{ ...styles.button, ...styles.primaryButton }}
               >
                 <Icons.FileText size={16} />
-                Import JSON
+                Import Project
               </label>
+
+              {backgroundImage && (
+                <div
+                  style={{
+                    color: "#10b981",
+                    fontSize: "14px",
+                    padding: "8px 12px",
+                    backgroundColor: "#064e3b",
+                    border: "1px solid #10b981",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  ✅ Image loaded: {imageName}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Color Palette - Actions'ın altında */}
-          <ColorPalette
-            colors={DEFAULT_COLORS}
-            paintColor={paintColor}
-            setPaintColor={setPaintColor}
-            labelColor={labelColor}
-            setLabelColor={setLabelColor}
-            onCreatePreset={() => {
-              setPresetColor(paintColor);
-              setShowPresetModal(true);
+          {/* Main Layout: Left Controls + Canvas + Right Colors */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "240px 1fr 200px",
+              gap: "16px",
+              marginBottom: "20px",
             }}
-            colorPresets={colorPresets}
-          />
+          >
+            {/* Left Side - Controls (3 boxes stacked) */}
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "20px" }}
+            >
+              <FloorManagement
+                currentFloor={currentFloor}
+                floors={floors}
+                onCreateFloor={createFloor}
+                onSwitchFloor={switchFloor}
+                onDeleteFloor={deleteFloor}
+                paintedCells={paintedCells}
+                cellLabels={cellLabels}
+              />
 
-          {/* Grid Controls - Canvas'ın hemen üstünde */}
-          <GridControls
-            gridSize={gridSize}
-            setGridSize={setGridSize}
-            isGridVisible={isGridVisible}
-            setIsGridVisible={setIsGridVisible}
-            labelsVisible={labelsVisible}
-            setLabelsVisible={setLabelsVisible}
-            backgroundVisible={backgroundVisible}
-            setBackgroundVisible={setBackgroundVisible}
-            gridOffset={gridOffset}
-            setGridOffset={setGridOffset}
-            paintedCells={paintedCells}
-            cellLabels={cellLabels}
-            zoom={zoom}
-            setZoom={setZoom}
-            centerView={centerView}
-            labelSize={labelSize}
-            setLabelSize={setLabelSize}
-          />
+              <GridSettings
+                gridSize={gridSize}
+                setGridSize={setGridSize}
+                isGridVisible={isGridVisible}
+                setIsGridVisible={setIsGridVisible}
+                labelsVisible={labelsVisible}
+                setLabelsVisible={setLabelsVisible}
+                backgroundVisible={backgroundVisible}
+                setBackgroundVisible={setBackgroundVisible}
+                showConnections={showConnections}
+                setShowConnections={setShowConnections}
+                showPrimaryConnections={showPrimaryConnections}
+                setShowPrimaryConnections={setShowPrimaryConnections}
+                showSecondaryConnections={showSecondaryConnections}
+                setShowSecondaryConnections={setShowSecondaryConnections}
+                showCornerIndicators={showCornerIndicators}
+                setShowCornerIndicators={setShowCornerIndicators}
+                labelSize={labelSize}
+                setLabelSize={setLabelSize}
+                gridOffset={gridOffset}
+                setGridOffset={setGridOffset}
+              />
 
-          {/* Action Buttons - Near Canvas */}
+              <ViewControls
+                zoom={zoom}
+                setZoom={setZoom}
+                centerView={centerView}
+                paintedCells={paintedCells}
+                cellLabels={cellLabels}
+              />
+            </div>
+
+            {/* Center - Canvas */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                padding: "20px",
+                backgroundColor: "#1a1a1a",
+                border: "1px solid #333",
+              }}
+            >
+              <div
+                style={{
+                  border: "3px solid #404040",
+                  borderRadius: "8px",
+                  overflow: "hidden",
+                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+                }}
+              >
+                <canvas
+                  ref={canvasRef}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseUp}
+                  onContextMenu={handleRightClick}
+                  style={{
+                    cursor: isDragging
+                      ? "grabbing"
+                      : isPainting
+                      ? "crosshair"
+                      : currentFloor
+                      ? "default"
+                      : "not-allowed",
+                    backgroundColor: "#000000",
+                    display: "block",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Right Side - Color Palette */}
+            <ColorPalette
+              colors={NAVIGATION_COLORS}
+              paintColor={paintColor}
+              setPaintColor={setPaintColor}
+              labelColor={labelColor}
+              setLabelColor={setLabelColor}
+              onCreatePreset={() => {
+                setPresetColor(paintColor);
+                setShowPresetModal(true);
+              }}
+              colorPresets={colorPresets}
+            />
+          </div>
+
+          {/* Action Buttons */}
           <div
             style={{
               display: "flex",
@@ -837,21 +1169,44 @@ const GridPainter: React.FC = () => {
               flexWrap: "wrap",
             }}
           >
-            {/* Export Buttons */}
+            {/* Export CSV Buttons */}
             <button
-              onClick={handleExportPNG}
-              style={{ ...styles.button, ...styles.successButton }}
+              onClick={() => handleExportCSV("current")}
+              disabled={!currentFloor}
+              style={{
+                ...styles.button,
+                ...styles.successButton,
+                opacity: !currentFloor ? 0.5 : 1,
+              }}
             >
               <Icons.Download size={16} />
-              Export PNG
+              Export Current Floor CSV
+            </button>
+
+            <button
+              onClick={() => handleExportCSV("all")}
+              disabled={floors.size === 0}
+              style={{
+                ...styles.button,
+                ...styles.successButton,
+                opacity: floors.size === 0 ? 0.5 : 1,
+              }}
+            >
+              <Icons.Download size={16} />
+              Export All Floors CSV
             </button>
 
             <button
               onClick={handleExportJSON}
-              style={{ ...styles.button, ...styles.successButton }}
+              disabled={floors.size === 0}
+              style={{
+                ...styles.button,
+                ...styles.successButton,
+                opacity: floors.size === 0 ? 0.5 : 1,
+              }}
             >
               <Icons.FileText size={16} />
-              Export JSON
+              Export Project JSON
             </button>
 
             {/* Separator */}
@@ -867,7 +1222,12 @@ const GridPainter: React.FC = () => {
             {/* Clear Buttons */}
             <button
               onClick={() => handleClearRequest("painted")}
-              style={{ ...styles.button, ...styles.warningButton }}
+              disabled={!currentFloor}
+              style={{
+                ...styles.button,
+                ...styles.warningButton,
+                opacity: !currentFloor ? 0.5 : 1,
+              }}
             >
               <Icons.RotateCcw size={16} />
               Clear Painted
@@ -875,7 +1235,12 @@ const GridPainter: React.FC = () => {
 
             <button
               onClick={() => handleClearRequest("labels")}
-              style={{ ...styles.button, ...styles.warningButton }}
+              disabled={!currentFloor}
+              style={{
+                ...styles.button,
+                ...styles.warningButton,
+                opacity: !currentFloor ? 0.5 : 1,
+              }}
             >
               <Icons.Type size={16} />
               Clear Labels
@@ -883,51 +1248,16 @@ const GridPainter: React.FC = () => {
 
             <button
               onClick={() => handleClearRequest("all")}
-              style={{ ...styles.button, ...styles.dangerButton }}
+              disabled={!currentFloor}
+              style={{
+                ...styles.button,
+                ...styles.dangerButton,
+                opacity: !currentFloor ? 0.5 : 1,
+              }}
             >
               <Icons.X size={16} />
               Clear All
             </button>
-          </div>
-
-          {/* Canvas */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              marginBottom: "24px",
-              padding: "20px",
-              backgroundColor: "#1a1a1a",
-              border: "1px solid #333",
-            }}
-          >
-            <div
-              style={{
-                border: "3px solid #404040",
-                borderRadius: "8px",
-                overflow: "hidden",
-                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
-              }}
-            >
-              <canvas
-                ref={canvasRef}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
-                onContextMenu={handleRightClick}
-                style={{
-                  cursor: isDragging
-                    ? "grabbing"
-                    : isPainting
-                    ? "crosshair"
-                    : "default",
-                  backgroundColor: "#000000",
-                  display: "block",
-                }}
-              />
-            </div>
           </div>
 
           {/* Instructions */}
@@ -940,7 +1270,7 @@ const GridPainter: React.FC = () => {
                 marginBottom: "12px",
               }}
             >
-              How to Use:
+              How to Use Grid Painter:
             </h3>
             <ul
               style={{
@@ -951,89 +1281,146 @@ const GridPainter: React.FC = () => {
               }}
             >
               <li>
-                <strong>Left Click:</strong> Paint cells (hold and drag for
-                multiple cells)
+                <strong>🏢 Create Floors:</strong> Start by creating your first
+                floor
               </li>
               <li>
-                <strong>Left Click (Same Color):</strong> Remove painted cell
+                <strong>🟢 Walkway (Green):</strong> Mark navigable paths
               </li>
               <li>
-                <strong>Right Click:</strong> Add/edit labels
+                <strong>🔴 POI (Red):</strong> Mark points of interest,
+                right-click to name and categorize
               </li>
               <li>
-                <strong>Ctrl + Left Click + Drag:</strong> Pan canvas (with
-                limits)
+                <strong>🔵 Elevator:</strong> Right-click to assign connection
+                ID (e.g., ELV_001)
               </li>
               <li>
-                <strong>Ctrl + Mouse Wheel:</strong> Zoom in/out (up to 1000%)
+                <strong>🟠 Stairs:</strong> Right-click to assign connection ID
+                (e.g., STR_001)
               </li>
               <li>
-                <strong>Center View Button:</strong> Reset view to image center
+                <strong>🟣 Escalator:</strong> Right-click to assign connection
+                ID (e.g., ESC_001)
               </li>
               <li>
-                <strong>Color Presets:</strong> Create preset labels for colors
+                <strong>Connection Lines:</strong> Toggle to see walkway
+                connections (smart pathfinding)
               </li>
               <li>
-                <strong>Multiple Labels:</strong> Separate labels with commas
+                <strong>Export:</strong> Generate 3 CSV files for AI navigation
+                systems
+              </li>
+              <li>
+                <strong>Controls:</strong> Ctrl+drag to pan, Ctrl+wheel to zoom,
+                right-click to label
               </li>
             </ul>
           </div>
 
-          {/* Export Section */}
-          <div ref={exportSectionRef} style={styles.dataContainer}>
-            <h2
-              style={{
-                fontSize: "20px",
-                fontWeight: "600",
-                color: "#ffffff",
-                marginBottom: "20px",
-              }}
-            >
-              Export Data
-            </h2>
+          {/* Export Preview */}
+          {currentFloor && (
+            <div ref={exportSectionRef} style={styles.dataContainer}>
+              <h2
+                style={{
+                  fontSize: "20px",
+                  fontWeight: "600",
+                  color: "#ffffff",
+                  marginBottom: "20px",
+                }}
+              >
+                Export Preview
+              </h2>
 
-            {paintedCells.size === 0 && cellLabels.size === 0 ? (
-              <div style={styles.dataBox}>
-                <p
-                  style={{
-                    color: "#888",
-                    textAlign: "center",
-                    margin: "40px 0",
-                  }}
-                >
-                  {UI_MESSAGES.noData}
-                </p>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr",
+                  gap: "20px",
+                }}
+              >
+                <div style={styles.dataBox}>
+                  <h3
+                    style={{
+                      fontSize: "16px",
+                      fontWeight: "600",
+                      color: "#10b981",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    📊 Navigation Grid
+                  </h3>
+                  <div style={{ color: "#ccc", fontSize: "14px" }}>
+                    •{" "}
+                    {
+                      Array.from(paintedCells.entries()).filter(
+                        ([_, color]) => color === "#16a34a"
+                      ).length
+                    }{" "}
+                    walkway cells
+                    <br />•{" "}
+                    {
+                      Array.from(paintedCells.entries()).filter(([_, color]) =>
+                        ["#2563eb", "#ea580c", "#7c3aed"].includes(color)
+                      ).length
+                    }{" "}
+                    connection points
+                    <br />• Floor: {currentFloor.name} (#{currentFloor.number})
+                  </div>
+                </div>
+
+                <div style={styles.dataBox}>
+                  <h3
+                    style={{
+                      fontSize: "16px",
+                      fontWeight: "600",
+                      color: "#dc2626",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    📍 Points of Interest
+                  </h3>
+                  <div style={{ color: "#ccc", fontSize: "14px" }}>
+                    •{" "}
+                    {
+                      Array.from(paintedCells.entries()).filter(
+                        ([_, color]) => color === "#dc2626"
+                      ).length
+                    }{" "}
+                    POI locations
+                    <br />•{" "}
+                    {
+                      (poiCategories.get(currentFloorKey) || new Map()).size
+                    }{" "}
+                    categorized
+                    <br />• {cellLabels.size} labeled cells
+                  </div>
+                </div>
+
+                <div style={styles.dataBox}>
+                  <h3
+                    style={{
+                      fontSize: "16px",
+                      fontWeight: "600",
+                      color: "#7c3aed",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    🏢 Vertical Connections
+                  </h3>
+                  <div style={{ color: "#ccc", fontSize: "14px" }}>
+                    • {floors.size} total floors
+                    <br />• Current: {currentFloor.name}
+                    <br />• Multi-floor navigation ready
+                  </div>
+                </div>
               </div>
-            ) : (
-              <div style={styles.dataBox}>
-                <h3
-                  style={{
-                    fontSize: "16px",
-                    fontWeight: "600",
-                    color: "#ffffff",
-                    marginBottom: "12px",
-                  }}
-                >
-                  Grid Data (JSON)
-                </h3>
-                <textarea
-                  value={JSON.stringify(generateExportData(), null, 2)}
-                  readOnly
-                  style={styles.textarea}
-                  onClick={(e) => e.currentTarget.select()}
-                />
-                <p
-                  style={{ color: "#888", fontSize: "12px", marginTop: "8px" }}
-                >
-                  {UI_MESSAGES.copyInstructions}
-                </p>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Label Modal */}
+      {/* Modals */}
       {showLabelModal && (
         <div style={styles.modal}>
           <div style={styles.modalContent}>
@@ -1045,27 +1432,69 @@ const GridPainter: React.FC = () => {
                 marginBottom: "16px",
               }}
             >
-              Edit Labels
+              Edit Cell Label
             </h3>
             <p
               style={{ color: "#ccc", marginBottom: "12px", fontSize: "14px" }}
             >
-              Cell: ({labelModalCell?.row}, {labelModalCell?.col})
+              Cell: ({labelModalCell?.row}, {labelModalCell?.col}) on{" "}
+              {currentFloor?.name}
             </p>
-            <p
-              style={{ color: "#ccc", marginBottom: "16px", fontSize: "14px" }}
-            >
-              Separate multiple labels with commas
-            </p>
-            <input
-              type="text"
-              value={tempLabel}
-              onChange={(e) => setTempLabel(e.target.value)}
-              placeholder="Enter labels (comma separated)"
-              style={{ ...styles.input, width: "100%", marginBottom: "16px" }}
-              autoFocus
-              onKeyDown={(e) => e.key === "Enter" && handleLabelSubmit()}
-            />
+
+            {/* Name Input */}
+            <div style={{ marginBottom: "16px" }}>
+              <label
+                style={{
+                  color: "#ccc",
+                  fontSize: "14px",
+                  marginBottom: "8px",
+                  display: "block",
+                }}
+              >
+                Name/ID:
+              </label>
+              <input
+                type="text"
+                value={tempLabel}
+                onChange={(e) => setTempLabel(e.target.value)}
+                placeholder="Enter name or connection ID (e.g., ELV_001)"
+                style={{ ...styles.input, width: "100%" }}
+                autoFocus
+                onKeyDown={(e) => e.key === "Enter" && handleLabelSubmit()}
+              />
+            </div>
+
+            {/* POI Category (only for POI cells) */}
+            {labelModalCell &&
+              paintedCells.get(
+                coordsToKey(labelModalCell.row, labelModalCell.col)
+              ) === "#dc2626" && (
+                <div style={{ marginBottom: "16px" }}>
+                  <label
+                    style={{
+                      color: "#fbbf24",
+                      fontSize: "14px",
+                      marginBottom: "8px",
+                      display: "block",
+                    }}
+                  >
+                    📍 POI Category:
+                  </label>
+                  <select
+                    value={tempPOICategory}
+                    onChange={(e) => setTempPOICategory(e.target.value)}
+                    style={{ ...styles.input, width: "100%" }}
+                  >
+                    <option value="">Select Category...</option>
+                    {POI_CATEGORIES.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
             <div
               style={{
                 display: "flex",
@@ -1090,7 +1519,6 @@ const GridPainter: React.FC = () => {
         </div>
       )}
 
-      {/* Clear Confirmation Modal */}
       {showClearConfirm && (
         <div style={styles.modal}>
           <div style={styles.modalContent}>
@@ -1110,8 +1538,8 @@ const GridPainter: React.FC = () => {
                 ? "all data"
                 : clearType === "painted"
                 ? "painted cells"
-                : "labels"}
-              ? This action cannot be undone.
+                : "labels"}{" "}
+              on {currentFloor?.name}? This action cannot be undone.
             </p>
             <div
               style={{
@@ -1137,7 +1565,6 @@ const GridPainter: React.FC = () => {
         </div>
       )}
 
-      {/* Preset Modal */}
       {showPresetModal && (
         <div style={styles.modal}>
           <div style={styles.modalContent}>
@@ -1155,7 +1582,7 @@ const GridPainter: React.FC = () => {
               style={{ color: "#ccc", marginBottom: "16px", fontSize: "14px" }}
             >
               Create default labels for color:{" "}
-              {DEFAULT_COLORS.find((c) => c.value === presetColor)?.name ||
+              {NAVIGATION_COLORS.find((c) => c.value === presetColor)?.name ||
                 presetColor}
             </p>
             <input
