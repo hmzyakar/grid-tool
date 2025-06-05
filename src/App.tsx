@@ -46,6 +46,7 @@ interface CellData {
 const GridPainter: React.FC = () => {
   // Core state
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const exportSectionRef = useRef<HTMLDivElement>(null);
 
   // Floor management - starts empty
   const [currentFloor, setCurrentFloor] = useState<{
@@ -248,6 +249,62 @@ const GridPainter: React.FC = () => {
       }
     },
     [floors, poiCategories]
+  );
+
+  const editFloor = useCallback(
+    (oldKey: string, newName: string, newNumber: number) => {
+      const newKey = `${newNumber}_${newName}`;
+
+      // Check if new key already exists (and it's different from old key)
+      if (newKey !== oldKey && floors.has(newKey)) {
+        alert("A floor with this number and name already exists!");
+        return;
+      }
+
+      // Get the old floor data
+      const oldFloorData = floors.get(oldKey);
+      if (!oldFloorData) return;
+
+      // Create updated floor data
+      const updatedFloorData: FloorData = {
+        ...oldFloorData,
+        name: newName,
+        number: newNumber,
+      };
+
+      // Update floors map
+      const newFloors = new Map(floors);
+      newFloors.delete(oldKey); // Remove old entry
+      newFloors.set(newKey, updatedFloorData); // Add updated entry
+      setFloors(newFloors);
+
+      // Update POI categories map
+      const oldPOICategories = poiCategories.get(oldKey);
+      if (oldPOICategories) {
+        const newPOICategories = new Map(poiCategories);
+        newPOICategories.delete(oldKey);
+        newPOICategories.set(newKey, oldPOICategories);
+        setPOICategories(newPOICategories);
+      }
+
+      // Update floor images map
+      const oldFloorImage = floorImages.get(oldKey);
+      if (oldFloorImage) {
+        const newFloorImages = new Map(floorImages);
+        newFloorImages.delete(oldKey);
+        newFloorImages.set(newKey, oldFloorImage);
+        setFloorImages(newFloorImages);
+      }
+
+      // Update current floor if it was the one being edited
+      if (
+        currentFloor &&
+        `${currentFloor.number}_${currentFloor.name}` === oldKey
+      ) {
+        setCurrentFloor({ name: newName, number: newNumber });
+      }
+    },
+    [floors, poiCategories, floorImages, currentFloor]
   );
 
   // Canvas setup
@@ -887,7 +944,7 @@ const GridPainter: React.FC = () => {
     return parts.join("_") + extension;
   };
 
-  // FİX 5: Preview CSV export
+  // Preview CSV export
   const handlePreviewCSV = (type: "current" | "all") => {
     if (floors.size === 0) {
       alert("No floors to export!");
@@ -928,7 +985,7 @@ const GridPainter: React.FC = () => {
     setShowExportPreview(true);
   };
 
-  // FİX 5: Actual CSV export
+  // Actual CSV export
   const handleExportCSV = (type: "current" | "all") => {
     if (floors.size === 0) {
       alert("No floors to export!");
@@ -984,7 +1041,7 @@ const GridPainter: React.FC = () => {
     }
   };
 
-  // FİX 5: Preview JSON export
+  // Preview JSON export
   const handlePreviewJSON = () => {
     if (floors.size === 0) {
       alert("No floors to export!");
@@ -1056,7 +1113,7 @@ const GridPainter: React.FC = () => {
     setShowExportPreview(true);
   };
 
-  // FİX 5: Actual JSON export
+  // Actual JSON export
   const handleExportJSON = () => {
     if (floors.size === 0) {
       alert("No floors to export!");
@@ -1132,7 +1189,7 @@ const GridPainter: React.FC = () => {
     }
   };
 
-  // FİX 5: Preview PNG export
+  // Preview PNG export
   const handlePreviewPNG = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -1148,7 +1205,7 @@ const GridPainter: React.FC = () => {
     setShowExportPreview(true);
   };
 
-  // FİX 5: Actual PNG export
+  // Actual PNG export
   const handleExportPNG = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -1158,7 +1215,7 @@ const GridPainter: React.FC = () => {
     downloadPNG(dataUrl, filename);
   };
 
-  // FİX 5: Export preview download handler
+  // Export preview download handler
   const handleExportPreviewDownload = () => {
     if (exportPreviewData.type === "csv") {
       downloadCSV(exportPreviewData.content, exportPreviewData.filename);
@@ -1586,7 +1643,7 @@ const GridPainter: React.FC = () => {
             />
           </div>
 
-          {/* FİX 5: Action Buttons with Preview options */}
+          {/* Action Buttons with Preview options */}
           <div
             style={{
               display: "flex",
@@ -1913,7 +1970,7 @@ const GridPainter: React.FC = () => {
         </div>
       </div>
 
-      {/* FİX 5: Export Preview Modal */}
+      {/* Export Preview Modal */}
       <ExportPreviewModal
         isOpen={showExportPreview}
         onClose={() => setShowExportPreview(false)}
