@@ -97,12 +97,13 @@ const GridPainter: React.FC = () => {
   const [showPrimaryConnections, setShowPrimaryConnections] = useState(true);
   const [showSecondaryConnections, setShowSecondaryConnections] =
     useState(true);
-  const [showCornerIndicators, setShowCornerIndicators] = useState(false);
+  const [showCornerIndicators, setShowCornerIndicators] = useState(true);
   const [gridOffset, setGridOffset] = useState({ x: 0, y: 0 });
   const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [backgroundImage, setBackgroundImage] =
-    useState<HTMLImageElement | null>(null);
+  const [floorImages, setFloorImages] = useState<
+    Map<string, { image: HTMLImageElement; name: string }>
+  >(new Map());
   const [imageName, setImageName] = useState<string>("untitled");
 
   // Interaction state
@@ -127,7 +128,8 @@ const GridPainter: React.FC = () => {
   const [presetColor, setPresetColor] = useState("");
   const [presetLabels, setPresetLabels] = useState("");
 
-  // FİX 5: Export preview state
+  // Image upload state
+  const [showRemoveImageConfirm, setShowRemoveImageConfirm] = useState(false);
   const [showExportPreview, setShowExportPreview] = useState(false);
   const [exportPreviewData, setExportPreviewData] = useState({
     type: "csv" as "csv" | "json" | "png",
@@ -135,7 +137,15 @@ const GridPainter: React.FC = () => {
     filename: "",
   });
 
-  const exportSectionRef = useRef<HTMLDivElement>(null);
+  // Current floor's background image
+  const backgroundImage = currentFloor
+    ? floorImages.get(currentFloorKey)?.image || null
+    : null;
+
+  // Current floor's image name
+  const currentImageName = currentFloor
+    ? floorImages.get(currentFloorKey)?.name || "untitled"
+    : "untitled";
 
   // Floor Management Functions
   const createFloor = useCallback(
@@ -732,21 +742,48 @@ const GridPainter: React.FC = () => {
     setPresetLabels("");
   };
 
-  // Image upload
+  // Image upload - floor specific
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!currentFloor) {
+      alert("Please create or select a floor first!");
+      return;
+    }
+
     const file = event.target.files?.[0];
     if (!file) return;
 
     const fileName =
       file.name.substring(0, file.name.lastIndexOf(".")) || file.name;
-    setImageName(fileName);
 
     const img = new Image();
     img.onload = () => {
-      setBackgroundImage(img);
+      setFloorImages((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(currentFloorKey, { image: img, name: fileName });
+        return newMap;
+      });
       setTimeout(() => centerView(), 100);
     };
     img.src = URL.createObjectURL(file);
+
+    // Reset input value to allow same file upload again
+    event.target.value = "";
+  };
+
+  // Remove image with confirmation - floor specific
+  const handleRemoveImageRequest = () => {
+    if (!currentFloor) return;
+    setShowRemoveImageConfirm(true);
+  };
+
+  const handleRemoveImageConfirm = () => {
+    if (!currentFloor) return;
+    setFloorImages((prev) => {
+      const newMap = new Map(prev);
+      newMap.delete(currentFloorKey);
+      return newMap;
+    });
+    setShowRemoveImageConfirm(false);
   };
 
   // JSON import/export for floors
@@ -1194,26 +1231,238 @@ const GridPainter: React.FC = () => {
               <label
                 htmlFor="jsonImport"
                 style={{ ...styles.button, ...styles.primaryButton }}
-                title="Import JSON project file exported from Grid Painter" // FİX 8: Açıklama eklendi
+                title="Import JSON project file (.json) exported from Grid Painter. This will restore all floors, settings, and painted data."
               >
                 <Icons.FileText size={16} />
-                Import Project
+                Import Project (.json)
               </label>
 
               {backgroundImage && (
                 <div
                   style={{
-                    color: "#10b981",
-                    fontSize: "14px",
-                    padding: "8px 12px",
-                    backgroundColor: "#064e3b",
-                    border: "1px solid #10b981",
                     display: "flex",
                     alignItems: "center",
                     gap: "8px",
                   }}
                 >
-                  ✅ Image loaded: {imageName}
+                  <div
+                    style={{
+                      color: "#10b981",
+                      fontSize: "14px",
+                      padding: "8px 12px",
+                      backgroundColor: "#064e3b",
+                      border: "1px solid #10b981",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    ✅ Image loaded: {currentImageName}
+                  </div>
+
+                  {/* Statistics below canvas - horizontal layout */}
+                  {currentFloor && (
+                    <div
+                      style={{
+                        backgroundColor: "#262626",
+                        border: "1px solid #404040",
+                        padding: "12px 16px",
+                        marginBottom: "20px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "24px",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            backgroundColor: "#16a34a",
+                            color: "#fff",
+                            padding: "4px 10px",
+                            fontSize: "12px",
+                            fontWeight: "600",
+                            borderRadius: "4px",
+                            minWidth: "24px",
+                            textAlign: "center",
+                          }}
+                        >
+                          {
+                            Array.from(paintedCells.entries()).filter(
+                              ([_, color]) => color === "#16a34a"
+                            ).length
+                          }
+                        </div>
+                        <span
+                          style={{
+                            color: "#ccc",
+                            fontSize: "13px",
+                            fontWeight: "500",
+                          }}
+                        >
+                          Walkways
+                        </span>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            backgroundColor: "#dc2626",
+                            color: "#fff",
+                            padding: "4px 10px",
+                            fontSize: "12px",
+                            fontWeight: "600",
+                            borderRadius: "4px",
+                            minWidth: "24px",
+                            textAlign: "center",
+                          }}
+                        >
+                          {
+                            Array.from(paintedCells.entries()).filter(
+                              ([_, color]) => color === "#dc2626"
+                            ).length
+                          }
+                        </div>
+                        <span
+                          style={{
+                            color: "#ccc",
+                            fontSize: "13px",
+                            fontWeight: "500",
+                          }}
+                        >
+                          POIs
+                        </span>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            backgroundColor: "#2563eb",
+                            color: "#fff",
+                            padding: "4px 10px",
+                            fontSize: "12px",
+                            fontWeight: "600",
+                            borderRadius: "4px",
+                            minWidth: "24px",
+                            textAlign: "center",
+                          }}
+                        >
+                          {
+                            Array.from(paintedCells.entries()).filter(
+                              ([_, color]) =>
+                                ["#2563eb", "#ea580c", "#7c3aed"].includes(
+                                  color
+                                )
+                            ).length
+                          }
+                        </div>
+                        <span
+                          style={{
+                            color: "#ccc",
+                            fontSize: "13px",
+                            fontWeight: "500",
+                          }}
+                        >
+                          Vertical Connections
+                        </span>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            backgroundColor: "#16a34a",
+                            color: "#fff",
+                            padding: "4px 10px",
+                            fontSize: "12px",
+                            fontWeight: "600",
+                            borderRadius: "4px",
+                            minWidth: "24px",
+                            textAlign: "center",
+                          }}
+                        >
+                          {cellLabels.size}
+                        </div>
+                        <span
+                          style={{
+                            color: "#ccc",
+                            fontSize: "13px",
+                            fontWeight: "500",
+                          }}
+                        >
+                          Labeled Cells
+                        </span>
+                      </div>
+
+                      {backgroundImage && (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              backgroundColor: "#7c3aed",
+                              color: "#fff",
+                              padding: "4px 10px",
+                              fontSize: "12px",
+                              fontWeight: "600",
+                              borderRadius: "4px",
+                            }}
+                          >
+                            📷
+                          </div>
+                          <span
+                            style={{
+                              color: "#ccc",
+                              fontSize: "13px",
+                              fontWeight: "500",
+                            }}
+                          >
+                            {currentImageName}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <button
+                    onClick={handleRemoveImageRequest}
+                    style={{
+                      ...styles.button,
+                      ...styles.dangerButton,
+                      fontSize: "12px",
+                      padding: "8px 12px",
+                    }}
+                  >
+                    <Icons.X size={14} />
+                    Remove Image
+                  </button>
                 </div>
               )}
             </div>
@@ -1226,6 +1475,7 @@ const GridPainter: React.FC = () => {
             onCreateFloor={createFloor}
             onSwitchFloor={switchFloor}
             onDeleteFloor={deleteFloor}
+            onEditFloor={editFloor}
             paintedCells={paintedCells}
             cellLabels={cellLabels}
           />
@@ -1234,8 +1484,8 @@ const GridPainter: React.FC = () => {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "200px 1fr 220px",
-              gap: "16px",
+              gridTemplateColumns: "240px 1fr 240px",
+              gap: "12px",
               marginBottom: "20px",
               alignItems: "start",
             }}
@@ -1275,8 +1525,6 @@ const GridPainter: React.FC = () => {
                 zoom={zoom}
                 setZoom={setZoom}
                 centerView={centerView}
-                paintedCells={paintedCells}
-                cellLabels={cellLabels}
               />
             </div>
 
@@ -1286,7 +1534,7 @@ const GridPainter: React.FC = () => {
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
-                padding: "20px",
+                padding: "16px 8px", // Reduced horizontal padding
                 backgroundColor: "#1a1a1a",
                 border: "1px solid #333",
               }}
@@ -1316,6 +1564,8 @@ const GridPainter: React.FC = () => {
                       : "not-allowed",
                     backgroundColor: "#000000",
                     display: "block",
+                    maxWidth: "100%",
+                    maxHeight: "600px",
                   }}
                 />
               </div>
@@ -1549,8 +1799,9 @@ const GridPainter: React.FC = () => {
                 connections (smart pathfinding)
               </li>
               <li>
-                <strong>Export:</strong> Preview and generate CSV, JSON, and PNG
-                files
+                <strong>Export:</strong> Generates 3 CSV files: Navigation Grid
+                (pathfinding data), Points of Interest (POI locations), and
+                Vertical Connections (elevator/stairs between floors)
               </li>
               <li>
                 <strong>Controls:</strong> Ctrl+drag to pan, Ctrl+wheel to zoom,
@@ -1570,7 +1821,7 @@ const GridPainter: React.FC = () => {
                   marginBottom: "20px",
                 }}
               >
-                Export Preview
+                Export Preview - 3 CSV Files Generated
               </h2>
 
               <div
@@ -1589,10 +1840,11 @@ const GridPainter: React.FC = () => {
                       marginBottom: "12px",
                     }}
                   >
-                    📊 Navigation Grid
+                    📊 Navigation Grid CSV (Current Floor)
                   </h3>
                   <div style={{ color: "#ccc", fontSize: "14px" }}>
-                    •{" "}
+                    • Floor: {currentFloor.name} (#{currentFloor.number})
+                    <br />•{" "}
                     {
                       Array.from(paintedCells.entries()).filter(
                         ([_, color]) => color === "#16a34a"
@@ -1606,7 +1858,7 @@ const GridPainter: React.FC = () => {
                       ).length
                     }{" "}
                     connection points
-                    <br />• Floor: {currentFloor.name} (#{currentFloor.number})
+                    <br />• AI pathfinding data with 4-way priority
                   </div>
                 </div>
 
@@ -1619,7 +1871,7 @@ const GridPainter: React.FC = () => {
                       marginBottom: "12px",
                     }}
                   >
-                    📍 Points of Interest
+                    📍 Points of Interest CSV (Current Floor)
                   </h3>
                   <div style={{ color: "#ccc", fontSize: "14px" }}>
                     •{" "}
@@ -1633,8 +1885,8 @@ const GridPainter: React.FC = () => {
                     {
                       (poiCategories.get(currentFloorKey) || new Map()).size
                     }{" "}
-                    categorized
-                    <br />• {cellLabels.size} labeled cells
+                    categorized POIs
+                    <br />• Names, categories, coordinates
                   </div>
                 </div>
 
@@ -1647,12 +1899,12 @@ const GridPainter: React.FC = () => {
                       marginBottom: "12px",
                     }}
                   >
-                    🏢 Vertical Connections
+                    🏢 Vertical Connections CSV
                   </h3>
                   <div style={{ color: "#ccc", fontSize: "14px" }}>
                     • {floors.size} total floors
-                    <br />• Current: {currentFloor.name}
-                    <br />• Multi-floor navigation ready
+                    <br />• Elevators, stairs, escalators
+                    <br />• Cross-floor navigation data
                   </div>
                 </div>
               </div>
@@ -1670,6 +1922,52 @@ const GridPainter: React.FC = () => {
         onDownload={handleExportPreviewDownload}
         filename={exportPreviewData.filename}
       />
+
+      {/* Remove Image Confirmation Modal */}
+      {showRemoveImageConfirm && (
+        <div style={styles.modal}>
+          <div style={styles.modalContent}>
+            <h3
+              style={{
+                fontSize: "18px",
+                fontWeight: "600",
+                color: "#ffffff",
+                marginBottom: "16px",
+              }}
+            >
+              Remove Background Image
+            </h3>
+            <p style={{ color: "#ccc", marginBottom: "20px" }}>
+              Are you sure you want to remove the background image "
+              {currentImageName}"?
+              <br />
+              <span style={{ color: "#fbbf24" }}>
+                You can upload a new image anytime.
+              </span>
+            </p>
+            <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                justifyContent: "flex-end",
+              }}
+            >
+              <button
+                onClick={() => setShowRemoveImageConfirm(false)}
+                style={styles.button}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRemoveImageConfirm}
+                style={{ ...styles.button, ...styles.dangerButton }}
+              >
+                Remove Image
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modals */}
       {showLabelModal && (

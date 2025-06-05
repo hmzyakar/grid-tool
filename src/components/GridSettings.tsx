@@ -51,41 +51,37 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
     <div style={styles.section}>
       <h3
         style={{
-          fontSize: "14px", // FİX 4: Daha küçük başlık
+          fontSize: "16px", // Bigger header
           fontWeight: "600",
           color: "#ffffff",
-          marginBottom: "12px", // FİX 4: Daha az margin
+          marginBottom: "14px",
           display: "flex",
           alignItems: "center",
-          gap: "6px",
+          gap: "8px",
         }}
       >
-        <Icons.Settings size={16} /> {/* FİX 4: Daha küçük icon */}
+        <Icons.Settings size={18} />
         Grid Settings
       </h3>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-        {" "}
-        {/* FİX 4: Daha küçük gap */}
-        {/* Grid Size - Kompakt */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        {/* Grid Size - More readable */}
         <div>
           <label
             style={{
               color: "#ccc",
               fontWeight: "500",
-              fontSize: "11px", // FİX 4: Daha küçük font
-              marginBottom: "4px", // FİX 4: Daha az margin
+              fontSize: "13px", // Bigger font
+              marginBottom: "6px",
               display: "block",
             }}
           >
             Grid Size: {gridSize}px
           </label>
-          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-            {" "}
-            {/* FİX 4: Daha küçük gap */}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <input
               type="range"
-              min="5"
+              min="1"
               max="100"
               value={gridSize}
               onChange={(e) => setGridSize(Number(e.target.value))}
@@ -99,20 +95,21 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
               onChange={(e) => setGridSize(Number(e.target.value))}
               style={{
                 ...styles.input,
-                width: "40px",
-                fontSize: "10px",
-                padding: "2px 4px",
+                width: "45px",
+                fontSize: "11px",
+                padding: "3px 5px",
               }}
             />
           </div>
         </div>
-        {/* FİX 4&5: Visibility Toggles - Daha kompakt */}
+
+        {/* Visibility Toggles - More readable */}
         <div>
           <label
             style={{
               color: "#ccc",
-              fontSize: "11px", // FİX 4: Daha küçük font
-              marginBottom: "6px",
+              fontSize: "13px", // Bigger font
+              marginBottom: "8px",
               display: "block",
             }}
           >
@@ -122,24 +119,24 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
             style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
-              gap: "4px", // FİX 4: Daha küçük gap
-              fontSize: "10px", // FİX 4: Daha küçük font
+              gap: "6px", // More space
+              fontSize: "12px", // Bigger font
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <input
                 type="checkbox"
                 id="backgroundVisible"
                 checked={backgroundVisible}
                 onChange={(e) => setBackgroundVisible(e.target.checked)}
-                style={{ width: "10px", height: "10px" }} // FİX 4: Daha küçük checkbox
+                style={{ width: "12px", height: "12px" }} // Bigger checkbox
               />
               <label
                 htmlFor="backgroundVisible"
                 style={{
                   color: "#ccc",
                   fontWeight: "500",
-                  fontSize: "10px",
+                  fontSize: "12px",
                   cursor: "pointer",
                 }}
               >
@@ -147,20 +144,20 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
               </label>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <input
                 type="checkbox"
                 id="gridVisible"
                 checked={isGridVisible}
                 onChange={(e) => setIsGridVisible(e.target.checked)}
-                style={{ width: "10px", height: "10px" }}
+                style={{ width: "12px", height: "12px" }}
               />
               <label
                 htmlFor="gridVisible"
                 style={{
                   color: "#ccc",
                   fontWeight: "500",
-                  fontSize: "10px",
+                  fontSize: "12px",
                   cursor: "pointer",
                 }}
               >
@@ -168,20 +165,20 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
               </label>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <input
                 type="checkbox"
                 id="labelsVisible"
                 checked={labelsVisible}
                 onChange={(e) => setLabelsVisible(e.target.checked)}
-                style={{ width: "10px", height: "10px" }}
+                style={{ width: "12px", height: "12px" }}
               />
               <label
                 htmlFor="labelsVisible"
                 style={{
                   color: "#ccc",
                   fontWeight: "500",
-                  fontSize: "10px",
+                  fontSize: "12px",
                   cursor: "pointer",
                 }}
               >
@@ -189,64 +186,64 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
               </label>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <input
                 type="checkbox"
                 id="pathwaysVisible"
                 checked={showConnections}
                 onChange={(e) => setShowConnections(e.target.checked)}
-                style={{ width: "10px", height: "10px" }}
+                style={{ width: "12px", height: "12px" }}
               />
               <label
                 htmlFor="pathwaysVisible"
                 style={{
                   color: "#ccc",
                   fontWeight: "500",
-                  fontSize: "10px",
+                  fontSize: "12px",
                   cursor: "pointer",
                 }}
               >
-                Pathways {/* FİX 5: "Connections" yerine "Pathways" */}
+                Pathways
               </label>
             </div>
           </div>
 
-          {/* Movement Priority Sub-options - Daha kompakt */}
+          {/* Movement Priority Sub-options - More readable */}
           {showConnections && (
             <div
               style={{
-                marginTop: "6px", // FİX 4: Daha az margin
-                paddingLeft: "8px", // FİX 4: Daha az padding
+                marginTop: "8px",
+                paddingLeft: "10px",
                 borderLeft: "2px solid #444",
                 display: "grid",
                 gridTemplateColumns: "1fr",
-                gap: "2px", // FİX 4: Daha küçük gap
+                gap: "4px",
               }}
             >
               <div
-                style={{ display: "flex", alignItems: "center", gap: "4px" }}
+                style={{ display: "flex", alignItems: "center", gap: "6px" }}
               >
                 <input
                   type="checkbox"
                   id="primaryConnections"
                   checked={showPrimaryConnections}
                   onChange={(e) => setShowPrimaryConnections(e.target.checked)}
-                  style={{ width: "9px", height: "9px" }} // FİX 4: Daha küçük
+                  style={{ width: "11px", height: "11px" }}
                 />
                 <label
                   htmlFor="primaryConnections"
                   style={{
                     color: "#10b981",
-                    fontSize: "9px",
+                    fontSize: "11px",
                     cursor: "pointer",
-                  }} // FİX 4: Daha küçük font
+                  }}
                 >
                   Primary (4-way)
                 </label>
               </div>
 
               <div
-                style={{ display: "flex", alignItems: "center", gap: "4px" }}
+                style={{ display: "flex", alignItems: "center", gap: "6px" }}
               >
                 <input
                   type="checkbox"
@@ -255,13 +252,13 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
                   onChange={(e) =>
                     setShowSecondaryConnections(e.target.checked)
                   }
-                  style={{ width: "9px", height: "9px" }}
+                  style={{ width: "11px", height: "11px" }}
                 />
                 <label
                   htmlFor="secondaryConnections"
                   style={{
                     color: "#10b981",
-                    fontSize: "9px",
+                    fontSize: "11px",
                     cursor: "pointer",
                   }}
                 >
@@ -270,20 +267,20 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
               </div>
 
               <div
-                style={{ display: "flex", alignItems: "center", gap: "4px" }}
+                style={{ display: "flex", alignItems: "center", gap: "6px" }}
               >
                 <input
                   type="checkbox"
                   id="cornerIndicators"
                   checked={showCornerIndicators}
                   onChange={(e) => setShowCornerIndicators(e.target.checked)}
-                  style={{ width: "9px", height: "9px" }}
+                  style={{ width: "11px", height: "11px" }}
                 />
                 <label
                   htmlFor="cornerIndicators"
                   style={{
                     color: "#ef4444",
-                    fontSize: "9px",
+                    fontSize: "11px",
                     cursor: "pointer",
                   }}
                 >
@@ -293,20 +290,21 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
             </div>
           )}
         </div>
-        {/* Label Size - Daha kompakt */}
+
+        {/* Label Size - More readable */}
         <div>
           <label
             style={{
               color: "#ccc",
               fontWeight: "500",
-              fontSize: "11px", // FİX 4: Daha küçük font
-              marginBottom: "4px", // FİX 4: Daha az margin
+              fontSize: "13px", // Bigger font
+              marginBottom: "6px",
               display: "block",
             }}
           >
             Label Size: {labelSize}px
           </label>
-          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <input
               type="range"
               min="6"
@@ -323,31 +321,30 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
               onChange={(e) => setLabelSize(Number(e.target.value))}
               style={{
                 ...styles.input,
-                width: "40px",
-                fontSize: "10px",
-                padding: "2px 4px",
-              }} // FİX 4: Daha küçük
+                width: "45px",
+                fontSize: "11px",
+                padding: "3px 5px",
+              }}
             />
           </div>
         </div>
-        {/* Grid Alignment - Daha kompakt */}
+
+        {/* Grid Alignment - More readable */}
         <div>
           <label
             style={{
               color: "#ccc",
-              fontSize: "11px", // FİX 4: Daha küçük font
-              marginBottom: "4px", // FİX 4: Daha az margin
+              fontSize: "13px", // Bigger font
+              marginBottom: "6px",
               display: "block",
             }}
           >
             Grid Alignment:
           </label>
-          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-            {" "}
-            {/* FİX 4: Daha küçük gap */}
-            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <span
-                style={{ color: "#ccc", minWidth: "12px", fontSize: "10px" }} // FİX 4: Daha küçük
+                style={{ color: "#ccc", minWidth: "15px", fontSize: "12px" }}
               >
                 X:
               </span>
@@ -369,15 +366,15 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
                 }
                 style={{
                   ...styles.input,
-                  width: "35px",
-                  fontSize: "9px",
-                  padding: "2px 3px",
-                }} // FİX 4: Daha küçük
+                  width: "40px",
+                  fontSize: "10px",
+                  padding: "2px 4px",
+                }}
               />
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <span
-                style={{ color: "#ccc", minWidth: "12px", fontSize: "10px" }}
+                style={{ color: "#ccc", minWidth: "15px", fontSize: "12px" }}
               >
                 Y:
               </span>
@@ -399,10 +396,10 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
                 }
                 style={{
                   ...styles.input,
-                  width: "35px",
-                  fontSize: "9px",
-                  padding: "2px 3px",
-                }} // FİX 4: Daha küçük
+                  width: "40px",
+                  fontSize: "10px",
+                  padding: "2px 4px",
+                }}
               />
             </div>
           </div>

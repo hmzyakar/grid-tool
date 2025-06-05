@@ -86,7 +86,7 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
       </h3>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        {/* Paint Colors - Vertical Compact Layout with Scroll */}
+        {/* Paint Colors - Vertical Compact Layout with Dynamic Scroll */}
         <div>
           <label
             style={{
@@ -99,13 +99,13 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
             Select Color:
           </label>
 
-          {/* Color List with Scroll */}
+          {/* Color List with Dynamic Scroll */}
           <div
             style={{
               backgroundColor: "#333",
               border: "1px solid #555",
-              maxHeight: "240px", // FİX 6: Daha küçük max height
-              overflowY: "auto", // FİX 6: Enable vertical scroll
+              maxHeight: customColors.length > 5 ? "280px" : "auto",
+              overflowY: customColors.length > 5 ? "auto" : "visible",
               marginBottom: "8px",
             }}
           >

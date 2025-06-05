@@ -9,6 +9,7 @@ interface FloorManagementProps {
   onCreateFloor: (name: string, number: number) => void;
   onSwitchFloor: (floorKey: string) => void;
   onDeleteFloor: (floorKey: string) => void;
+  onEditFloor: (oldKey: string, newName: string, newNumber: number) => void;
   paintedCells: Map<string, string>;
   cellLabels: Map<string, string[]>;
 }
@@ -19,13 +20,16 @@ export const FloorManagement: React.FC<FloorManagementProps> = ({
   onCreateFloor,
   onSwitchFloor,
   onDeleteFloor,
+  onEditFloor,
   paintedCells,
   cellLabels,
 }) => {
   const [newFloorName, setNewFloorName] = useState("");
   const [newFloorNumber, setNewFloorNumber] = useState(0);
-  // FİX 1: Floor silme onayı için state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editFloorName, setEditFloorName] = useState("");
+  const [editFloorNumber, setEditFloorNumber] = useState(0);
 
   const handleCreateFloor = () => {
     if (newFloorName.trim()) {
@@ -35,7 +39,6 @@ export const FloorManagement: React.FC<FloorManagementProps> = ({
     }
   };
 
-  // FİX 1: Floor silme onayı
   const handleDeleteRequest = () => {
     setShowDeleteConfirm(true);
   };
@@ -46,6 +49,22 @@ export const FloorManagement: React.FC<FloorManagementProps> = ({
       onDeleteFloor(currentKey);
     }
     setShowDeleteConfirm(false);
+  };
+
+  const handleEditRequest = () => {
+    if (currentFloor) {
+      setEditFloorName(currentFloor.name);
+      setEditFloorNumber(currentFloor.number);
+      setShowEditForm(true);
+    }
+  };
+
+  const handleEditConfirm = () => {
+    if (currentFloor && editFloorName.trim()) {
+      const oldKey = `${currentFloor.number}_${currentFloor.name}`;
+      onEditFloor(oldKey, editFloorName.trim(), editFloorNumber);
+      setShowEditForm(false);
+    }
   };
 
   if (floors.size === 0) {
@@ -129,7 +148,6 @@ export const FloorManagement: React.FC<FloorManagementProps> = ({
           🏢 Floor Management
         </h3>
 
-        {/* FİX 7: Daha compact layout, centered */}
         <div
           style={{
             display: "flex",
@@ -218,7 +236,7 @@ export const FloorManagement: React.FC<FloorManagementProps> = ({
             </button>
           </div>
 
-          {/* Switch Floor and Delete - Compact */}
+          {/* Switch Floor, Edit and Delete - Compact */}
           {floors.size >= 1 && currentFloor && (
             <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
               {floors.size > 1 ? (
@@ -255,7 +273,21 @@ export const FloorManagement: React.FC<FloorManagementProps> = ({
                 </div>
               )}
 
-              {/* FİX 1: Delete button with confirmation */}
+              {/* Edit Floor Button */}
+              <button
+                onClick={handleEditRequest}
+                style={{
+                  ...styles.button,
+                  ...styles.primaryButton,
+                  fontSize: "11px",
+                  padding: "6px 8px",
+                }}
+                title="Edit floor name and number"
+              >
+                <Icons.Settings size={12} />
+              </button>
+
+              {/* Delete button */}
               <button
                 onClick={handleDeleteRequest}
                 style={{
@@ -273,7 +305,90 @@ export const FloorManagement: React.FC<FloorManagementProps> = ({
         </div>
       </div>
 
-      {/* FİX 1: Delete Confirmation Modal */}
+      {/* Edit Floor Modal */}
+      {showEditForm && (
+        <div style={styles.modal}>
+          <div style={styles.modalContent}>
+            <h3
+              style={{
+                fontSize: "18px",
+                fontWeight: "600",
+                color: "#ffffff",
+                marginBottom: "16px",
+              }}
+            >
+              Edit Floor
+            </h3>
+
+            <div style={{ marginBottom: "16px" }}>
+              <label
+                style={{
+                  color: "#ccc",
+                  fontSize: "14px",
+                  marginBottom: "8px",
+                  display: "block",
+                }}
+              >
+                Floor Name:
+              </label>
+              <input
+                type="text"
+                value={editFloorName}
+                onChange={(e) => setEditFloorName(e.target.value)}
+                style={{ ...styles.input, width: "100%" }}
+                autoFocus
+              />
+            </div>
+
+            <div style={{ marginBottom: "20px" }}>
+              <label
+                style={{
+                  color: "#ccc",
+                  fontSize: "14px",
+                  marginBottom: "8px",
+                  display: "block",
+                }}
+              >
+                Floor Number:
+              </label>
+              <input
+                type="number"
+                value={editFloorNumber}
+                onChange={(e) => setEditFloorNumber(Number(e.target.value))}
+                style={{ ...styles.input, width: "100%" }}
+              />
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                justifyContent: "flex-end",
+              }}
+            >
+              <button
+                onClick={() => setShowEditForm(false)}
+                style={styles.button}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditConfirm}
+                disabled={!editFloorName.trim()}
+                style={{
+                  ...styles.button,
+                  ...styles.primaryButton,
+                  opacity: !editFloorName.trim() ? 0.5 : 1,
+                }}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div style={styles.modal}>
           <div style={styles.modalContent}>

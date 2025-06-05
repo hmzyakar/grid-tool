@@ -7,7 +7,7 @@ export interface Color {
   defaultLabel?: string;
 }
 
-// Navigation-specific colors
+// Navigation-specific colors - Only essential navigation types
 export const NAVIGATION_COLORS: Color[] = [
   { name: "Walkway", value: "#16a34a", category: "walkway", defaultLabel: "" },
   { name: "POI", value: "#dc2626", category: "poi", defaultLabel: "" },
@@ -24,13 +24,6 @@ export const NAVIGATION_COLORS: Color[] = [
     category: "escalator",
     defaultLabel: "",
   },
-  { name: "Purple", value: "#9333ea", category: "custom" },
-  { name: "Pink", value: "#db2777", category: "custom" },
-  { name: "Teal", value: "#0d9488", category: "custom" },
-  { name: "Indigo", value: "#4f46e5", category: "custom" },
-  { name: "Yellow", value: "#ca8a04", category: "custom" },
-  { name: "Slate", value: "#475569", category: "custom" },
-  { name: "Black", value: "#1f2937", category: "custom" },
 ];
 
 // POI Categories for airport/mall navigation
@@ -101,10 +94,10 @@ export const MIN_ZOOM = 0.1;
 export const MAX_ZOOM = 10;
 export const ZOOM_STEP = 0.1;
 
-// Updated canvas size for better visibility
+// Updated canvas size for better layout
 export const DEFAULT_CANVAS_SIZE = {
-  width: 1200,
-  height: 800,
+  width: 900,
+  height: 600,
 };
 
 export const MAX_LABEL_LENGTH = 100;

@@ -137,7 +137,7 @@ export const getSecondaryConnections = (
   return connections;
 };
 
-// FİX 3: Düzeltilmiş corner detection - köşenin kendisini işaretle
+// Improved corner detection for all sharp corner situations
 export const checkForSharpCorners = (
   row: number,
   col: number,
@@ -145,36 +145,54 @@ export const checkForSharpCorners = (
 ): boolean => {
   const walkwayColor = "#16a34a";
 
-  // Bu cell walkway olmalı
+  // This cell must be walkway
   if (paintedCells.get(coordsToKey(row, col)) !== walkwayColor) return false;
 
-  // 4 diagonal direction kontrol et
-  const diagonals = [
-    { dr: -1, dc: 1, north: { dr: -1, dc: 0 }, east: { dr: 0, dc: 1 } }, // kuzeydoğu
-    { dr: -1, dc: -1, north: { dr: -1, dc: 0 }, west: { dr: 0, dc: -1 } }, // kuzeybatı
-    { dr: 1, dc: 1, south: { dr: 1, dc: 0 }, east: { dr: 0, dc: 1 } }, // güneydoğu
-    { dr: 1, dc: -1, south: { dr: 1, dc: 0 }, west: { dr: 0, dc: -1 } }, // güneybatı
+  // Check all possible L-shaped corner situations
+  // A sharp corner occurs when we have 3 adjacent walkway cells forming an L-shape
+  const cornerPatterns = [
+    // Top-left corner: connections to right and down
+    {
+      adj1: { dr: 0, dc: 1 }, // right
+      adj2: { dr: 1, dc: 0 }, // down
+      diag: { dr: 1, dc: 1 }, // diagonal (southeast)
+    },
+    // Top-right corner: connections to left and down
+    {
+      adj1: { dr: 0, dc: -1 }, // left
+      adj2: { dr: 1, dc: 0 }, // down
+      diag: { dr: 1, dc: -1 }, // diagonal (southwest)
+    },
+    // Bottom-left corner: connections to right and up
+    {
+      adj1: { dr: 0, dc: 1 }, // right
+      adj2: { dr: -1, dc: 0 }, // up
+      diag: { dr: -1, dc: 1 }, // diagonal (northeast)
+    },
+    // Bottom-right corner: connections to left and up
+    {
+      adj1: { dr: 0, dc: -1 }, // left
+      adj2: { dr: -1, dc: 0 }, // up
+      diag: { dr: -1, dc: -1 }, // diagonal (northwest)
+    },
   ];
 
-  // Her diagonal için kontrol et
-  return diagonals.some((diag) => {
-    const diagCell = coordsToKey(row + diag.dr, col + diag.dc);
+  // Check each corner pattern
+  for (const pattern of cornerPatterns) {
+    const adj1Cell = coordsToKey(row + pattern.adj1.dr, col + pattern.adj1.dc);
+    const adj2Cell = coordsToKey(row + pattern.adj2.dr, col + pattern.adj2.dc);
 
-    // Diagonal cell walkway mi?
-    if (paintedCells.get(diagCell) !== walkwayColor) return false;
+    // Check if both adjacent cells are walkways (forming L-shape)
+    const adj1IsWalkway = paintedCells.get(adj1Cell) === walkwayColor;
+    const adj2IsWalkway = paintedCells.get(adj2Cell) === walkwayColor;
 
-    // Adjacent cells de walkway mi? (L-shape oluşturuyor mu?)
-    const adjCells = Object.values(diag).slice(1); // north/south, east/west
-    const adjacentWalkable = adjCells.every(
-      (adj) =>
-        paintedCells.get(coordsToKey(row + adj.dr, col + adj.dc)) ===
-        walkwayColor
-    );
+    // If we have an L-shape (two perpendicular walkway connections)
+    if (adj1IsWalkway && adj2IsWalkway) {
+      return true; // This is a sharp corner situation
+    }
+  }
 
-    // Eğer diagonal bağlantı var VE adjacent cell'ler de walkable ise
-    // bu bir sharp corner'dır
-    return adjacentWalkable;
-  });
+  return false;
 };
 
 export const getSmartConnections = (
@@ -348,12 +366,12 @@ export const drawConnectionLines = (
         });
       }
 
-      // FİX 2: Draw secondary connections - More dashed
+      // Draw secondary connections - Orange dashed for visibility
       if (showSecondary) {
-        ctx.strokeStyle = "#10b981"; // Same green as primary
-        ctx.lineWidth = 3 / zoom; // Same thickness as primary
-        ctx.globalAlpha = 0.7; // Same alpha as primary
-        ctx.setLineDash([4, 6]); // FİX 2: Daha kesikli (4px çizgi, 6px boşluk)
+        ctx.strokeStyle = "#ea580c"; // Orange instead of green
+        ctx.lineWidth = 2 / zoom; // Slightly thinner
+        ctx.globalAlpha = 0.8; // More visible
+        ctx.setLineDash([3, 4]); // Shorter dashes for subtlety
 
         secondaryConnections.forEach((adj) => {
           const { x: adjX, y: adjY } = gridToCanvasCoords(
@@ -374,23 +392,27 @@ export const drawConnectionLines = (
         ctx.setLineDash([]); // Reset line dash
       }
 
-      // FİX 3: Draw corner indicators - Kalın kırmızı, belirgin
+      // Corner indicators - More subtle
       if (showCorners) {
         const hasSharpCorner = checkForSharpCorners(row, col, paintedCells);
         if (hasSharpCorner) {
-          ctx.strokeStyle = "#ef4444"; // Red
-          ctx.lineWidth = 4 / zoom; // FİX 3: Daha kalın çizgi
-          ctx.globalAlpha = 1.0; // FİX 3: Tam opak, daha belirgin
+          ctx.strokeStyle = "#fbbf24"; // Yellow instead of red
+          ctx.lineWidth = 2 / zoom; // Thinner line
+          ctx.globalAlpha = 0.7; // More transparent
           ctx.setLineDash([]); // Solid line
 
-          // Draw thick red border around cell
-          const borderOffset = 1;
+          // Draw subtle border around the cell
+          const borderOffset = 3;
           ctx.strokeRect(
             centerX + borderOffset,
             centerY + borderOffset,
             gridSize - borderOffset * 2,
             gridSize - borderOffset * 2
           );
+
+          // Add a small yellow corner marker
+          ctx.fillStyle = "#fbbf24";
+          ctx.fillRect(centerX + 2, centerY + 2, 4 / zoom, 4 / zoom);
         }
       }
     }
