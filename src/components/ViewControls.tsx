@@ -31,27 +31,29 @@ export const ViewControls: React.FC<ViewControlsProps> = ({
     <div style={styles.section}>
       <h3
         style={{
-          fontSize: "16px",
+          fontSize: "14px", // FİX 4: Daha küçük başlık
           fontWeight: "600",
           color: "#ffffff",
-          marginBottom: "16px",
+          marginBottom: "12px", // FİX 4: Daha az margin
           display: "flex",
           alignItems: "center",
-          gap: "8px",
+          gap: "6px",
         }}
       >
-        <Icons.ZoomIn size={18} />
+        <Icons.ZoomIn size={16} /> {/* FİX 4: Daha küçük icon */}
         View Controls
       </h3>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        {" "}
+        {/* FİX 4: Daha küçük gap */}
         {/* Zoom Control */}
         <div>
           <label
             style={{
               color: "#ccc",
-              fontSize: "14px",
-              marginBottom: "8px",
+              fontSize: "11px", // FİX 4: Daha küçük font
+              marginBottom: "6px", // FİX 4: Daha az margin
               display: "block",
             }}
           >
@@ -61,19 +63,19 @@ export const ViewControls: React.FC<ViewControlsProps> = ({
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "8px",
-              marginBottom: "8px",
+              gap: "6px", // FİX 4: Daha küçük gap
+              marginBottom: "6px", // FİX 4: Daha az margin
             }}
           >
             <button
               onClick={() => setZoom(Math.max(0.1, zoom - 0.1))}
               style={{
                 ...styles.button,
-                padding: "6px 8px",
-                fontSize: "12px",
+                padding: "4px 6px", // FİX 4: Daha küçük padding
+                fontSize: "10px", // FİX 4: Daha küçük font
               }}
             >
-              <Icons.ZoomOut size={14} />
+              <Icons.ZoomOut size={12} /> {/* FİX 4: Daha küçük icon */}
             </button>
             <input
               type="range"
@@ -88,22 +90,24 @@ export const ViewControls: React.FC<ViewControlsProps> = ({
               onClick={() => setZoom(Math.min(5, zoom + 0.1))}
               style={{
                 ...styles.button,
-                padding: "6px 8px",
-                fontSize: "12px",
+                padding: "4px 6px", // FİX 4: Daha küçük padding
+                fontSize: "10px", // FİX 4: Daha küçük font
               }}
             >
-              <Icons.ZoomIn size={14} />
+              <Icons.ZoomIn size={12} /> {/* FİX 4: Daha küçük icon */}
             </button>
           </div>
 
-          <div style={{ display: "flex", gap: "6px" }}>
+          <div style={{ display: "flex", gap: "4px" }}>
+            {" "}
+            {/* FİX 4: Daha küçük gap */}
             <button
               onClick={() => setZoom(1)}
               style={{
                 ...styles.button,
                 ...styles.primaryButton,
-                padding: "6px 12px",
-                fontSize: "12px",
+                padding: "4px 8px", // FİX 4: Daha küçük padding
+                fontSize: "10px", // FİX 4: Daha küçük font
                 flex: 1,
               }}
             >
@@ -114,102 +118,103 @@ export const ViewControls: React.FC<ViewControlsProps> = ({
               style={{
                 ...styles.button,
                 ...styles.primaryButton,
-                padding: "6px 12px",
-                fontSize: "12px",
+                padding: "4px 8px", // FİX 4: Daha küçük padding
+                fontSize: "10px", // FİX 4: Daha küçük font
                 flex: 1,
               }}
             >
-              <Icons.Target size={14} />
+              <Icons.Target size={12} /> {/* FİX 4: Daha küçük icon */}
               Center
             </button>
           </div>
         </div>
-
         {/* Statistics */}
         <div>
           <label
             style={{
               color: "#ccc",
-              fontSize: "14px",
-              marginBottom: "8px",
+              fontSize: "11px", // FİX 4: Daha küçük font
+              marginBottom: "6px", // FİX 4: Daha az margin
               display: "block",
             }}
           >
             Statistics:
           </label>
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            {" "}
+            {/* FİX 4: Daha küçük gap */}
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              {" "}
+              {/* FİX 4: Daha küçük gap */}
               <div
                 style={{
                   backgroundColor: "#16a34a",
                   color: "#fff",
-                  padding: "3px 8px",
-                  fontSize: "11px",
+                  padding: "2px 6px", // FİX 4: Daha küçük padding
+                  fontSize: "10px", // FİX 4: Daha küçük font
                   fontWeight: "600",
                   borderRadius: "3px",
-                  minWidth: "20px",
+                  minWidth: "18px", // FİX 4: Daha küçük width
                   textAlign: "center",
                 }}
               >
                 {walkwayCount}
               </div>
-              <span style={{ color: "#ccc", fontSize: "12px" }}>Walkways</span>
+              <span style={{ color: "#ccc", fontSize: "10px" }}>Walkways</span>{" "}
+              {/* FİX 4: Daha küçük font */}
             </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <div
                 style={{
                   backgroundColor: "#dc2626",
                   color: "#fff",
-                  padding: "3px 8px",
-                  fontSize: "11px",
+                  padding: "2px 6px", // FİX 4: Daha küçük padding
+                  fontSize: "10px", // FİX 4: Daha küçük font
                   fontWeight: "600",
                   borderRadius: "3px",
-                  minWidth: "20px",
+                  minWidth: "18px", // FİX 4: Daha küçük width
                   textAlign: "center",
                 }}
               >
                 {poiCount}
               </div>
-              <span style={{ color: "#ccc", fontSize: "12px" }}>POIs</span>
+              <span style={{ color: "#ccc", fontSize: "10px" }}>POIs</span>
             </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <div
                 style={{
                   backgroundColor: "#2563eb",
                   color: "#fff",
-                  padding: "3px 8px",
-                  fontSize: "11px",
+                  padding: "2px 6px", // FİX 4: Daha küçük padding
+                  fontSize: "10px", // FİX 4: Daha küçük font
                   fontWeight: "600",
                   borderRadius: "3px",
-                  minWidth: "20px",
+                  minWidth: "18px", // FİX 4: Daha küçük width
                   textAlign: "center",
                 }}
               >
                 {connectionCount}
               </div>
-              <span style={{ color: "#ccc", fontSize: "12px" }}>
-                Connections
+              <span style={{ color: "#ccc", fontSize: "10px" }}>
+                Vertical Connections {/* FİX 5: Daha açık isim */}
               </span>
             </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <div
                 style={{
                   backgroundColor: "#16a34a",
                   color: "#fff",
-                  padding: "3px 8px",
-                  fontSize: "11px",
+                  padding: "2px 6px", // FİX 4: Daha küçük padding
+                  fontSize: "10px", // FİX 4: Daha küçük font
                   fontWeight: "600",
                   borderRadius: "3px",
-                  minWidth: "20px",
+                  minWidth: "18px", // FİX 4: Daha küçük width
                   textAlign: "center",
                 }}
               >
                 {cellLabels.size}
               </div>
-              <span style={{ color: "#ccc", fontSize: "12px" }}>Labeled</span>
+              <span style={{ color: "#ccc", fontSize: "10px" }}>Labeled</span>
             </div>
           </div>
         </div>

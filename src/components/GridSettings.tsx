@@ -51,34 +51,38 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
     <div style={styles.section}>
       <h3
         style={{
-          fontSize: "16px",
+          fontSize: "14px", // FİX 4: Daha küçük başlık
           fontWeight: "600",
           color: "#ffffff",
-          marginBottom: "16px",
+          marginBottom: "12px", // FİX 4: Daha az margin
           display: "flex",
           alignItems: "center",
-          gap: "8px",
+          gap: "6px",
         }}
       >
-        <Icons.Settings size={18} />
+        <Icons.Settings size={16} /> {/* FİX 4: Daha küçük icon */}
         Grid Settings
       </h3>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        {/* Grid Size */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        {" "}
+        {/* FİX 4: Daha küçük gap */}
+        {/* Grid Size - Kompakt */}
         <div>
           <label
             style={{
               color: "#ccc",
               fontWeight: "500",
-              fontSize: "14px",
-              marginBottom: "8px",
+              fontSize: "11px", // FİX 4: Daha küçük font
+              marginBottom: "4px", // FİX 4: Daha az margin
               display: "block",
             }}
           >
             Grid Size: {gridSize}px
           </label>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            {" "}
+            {/* FİX 4: Daha küçük gap */}
             <input
               type="range"
               min="5"
@@ -93,107 +97,156 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
               max="200"
               value={gridSize}
               onChange={(e) => setGridSize(Number(e.target.value))}
-              style={{ ...styles.input, width: "60px" }}
+              style={{
+                ...styles.input,
+                width: "40px",
+                fontSize: "10px",
+                padding: "2px 4px",
+              }}
             />
           </div>
         </div>
+        {/* FİX 4&5: Visibility Toggles - Daha kompakt */}
+        <div>
+          <label
+            style={{
+              color: "#ccc",
+              fontSize: "11px", // FİX 4: Daha küçük font
+              marginBottom: "6px",
+              display: "block",
+            }}
+          >
+            Visibility:
+          </label>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "4px", // FİX 4: Daha küçük gap
+              fontSize: "10px", // FİX 4: Daha küçük font
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <input
+                type="checkbox"
+                id="backgroundVisible"
+                checked={backgroundVisible}
+                onChange={(e) => setBackgroundVisible(e.target.checked)}
+                style={{ width: "10px", height: "10px" }} // FİX 4: Daha küçük checkbox
+              />
+              <label
+                htmlFor="backgroundVisible"
+                style={{
+                  color: "#ccc",
+                  fontWeight: "500",
+                  fontSize: "10px",
+                  cursor: "pointer",
+                }}
+              >
+                Background
+              </label>
+            </div>
 
-        {/* Visibility Toggles */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <input
-              type="checkbox"
-              id="backgroundVisible"
-              checked={backgroundVisible}
-              onChange={(e) => setBackgroundVisible(e.target.checked)}
-              style={{ width: "16px", height: "16px" }}
-            />
-            <label
-              htmlFor="backgroundVisible"
-              style={{ color: "#ccc", fontWeight: "500", fontSize: "14px" }}
-            >
-              Show Background
-            </label>
+            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <input
+                type="checkbox"
+                id="gridVisible"
+                checked={isGridVisible}
+                onChange={(e) => setIsGridVisible(e.target.checked)}
+                style={{ width: "10px", height: "10px" }}
+              />
+              <label
+                htmlFor="gridVisible"
+                style={{
+                  color: "#ccc",
+                  fontWeight: "500",
+                  fontSize: "10px",
+                  cursor: "pointer",
+                }}
+              >
+                Grid
+              </label>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <input
+                type="checkbox"
+                id="labelsVisible"
+                checked={labelsVisible}
+                onChange={(e) => setLabelsVisible(e.target.checked)}
+                style={{ width: "10px", height: "10px" }}
+              />
+              <label
+                htmlFor="labelsVisible"
+                style={{
+                  color: "#ccc",
+                  fontWeight: "500",
+                  fontSize: "10px",
+                  cursor: "pointer",
+                }}
+              >
+                Labels
+              </label>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <input
+                type="checkbox"
+                id="pathwaysVisible"
+                checked={showConnections}
+                onChange={(e) => setShowConnections(e.target.checked)}
+                style={{ width: "10px", height: "10px" }}
+              />
+              <label
+                htmlFor="pathwaysVisible"
+                style={{
+                  color: "#ccc",
+                  fontWeight: "500",
+                  fontSize: "10px",
+                  cursor: "pointer",
+                }}
+              >
+                Pathways {/* FİX 5: "Connections" yerine "Pathways" */}
+              </label>
+            </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <input
-              type="checkbox"
-              id="gridVisible"
-              checked={isGridVisible}
-              onChange={(e) => setIsGridVisible(e.target.checked)}
-              style={{ width: "16px", height: "16px" }}
-            />
-            <label
-              htmlFor="gridVisible"
-              style={{ color: "#ccc", fontWeight: "500", fontSize: "14px" }}
-            >
-              Show Grid
-            </label>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <input
-              type="checkbox"
-              id="labelsVisible"
-              checked={labelsVisible}
-              onChange={(e) => setLabelsVisible(e.target.checked)}
-              style={{ width: "16px", height: "16px" }}
-            />
-            <label
-              htmlFor="labelsVisible"
-              style={{ color: "#ccc", fontWeight: "500", fontSize: "14px" }}
-            >
-              Show Labels
-            </label>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <input
-              type="checkbox"
-              id="connectionsVisible"
-              checked={showConnections}
-              onChange={(e) => setShowConnections(e.target.checked)}
-              style={{ width: "16px", height: "16px" }}
-            />
-            <label
-              htmlFor="connectionsVisible"
-              style={{ color: "#ccc", fontWeight: "500", fontSize: "14px" }}
-            >
-              Show Connections
-            </label>
-          </div>
-
-          {/* Movement Priority Sub-options */}
+          {/* Movement Priority Sub-options - Daha kompakt */}
           {showConnections && (
             <div
               style={{
-                marginLeft: "28px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "8px",
+                marginTop: "6px", // FİX 4: Daha az margin
+                paddingLeft: "8px", // FİX 4: Daha az padding
+                borderLeft: "2px solid #444",
+                display: "grid",
+                gridTemplateColumns: "1fr",
+                gap: "2px", // FİX 4: Daha küçük gap
               }}
             >
               <div
-                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                style={{ display: "flex", alignItems: "center", gap: "4px" }}
               >
                 <input
                   type="checkbox"
                   id="primaryConnections"
                   checked={showPrimaryConnections}
                   onChange={(e) => setShowPrimaryConnections(e.target.checked)}
-                  style={{ width: "14px", height: "14px" }}
+                  style={{ width: "9px", height: "9px" }} // FİX 4: Daha küçük
                 />
                 <label
                   htmlFor="primaryConnections"
-                  style={{ color: "#10b981", fontSize: "12px" }}
+                  style={{
+                    color: "#10b981",
+                    fontSize: "9px",
+                    cursor: "pointer",
+                  }} // FİX 4: Daha küçük font
                 >
                   Primary (4-way)
                 </label>
               </div>
 
               <div
-                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                style={{ display: "flex", alignItems: "center", gap: "4px" }}
               >
                 <input
                   type="checkbox"
@@ -202,29 +255,37 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
                   onChange={(e) =>
                     setShowSecondaryConnections(e.target.checked)
                   }
-                  style={{ width: "14px", height: "14px" }}
+                  style={{ width: "9px", height: "9px" }}
                 />
                 <label
                   htmlFor="secondaryConnections"
-                  style={{ color: "#f97316", fontSize: "12px" }}
+                  style={{
+                    color: "#10b981",
+                    fontSize: "9px",
+                    cursor: "pointer",
+                  }}
                 >
                   Secondary (diagonal)
                 </label>
               </div>
 
               <div
-                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                style={{ display: "flex", alignItems: "center", gap: "4px" }}
               >
                 <input
                   type="checkbox"
                   id="cornerIndicators"
                   checked={showCornerIndicators}
                   onChange={(e) => setShowCornerIndicators(e.target.checked)}
-                  style={{ width: "14px", height: "14px" }}
+                  style={{ width: "9px", height: "9px" }}
                 />
                 <label
                   htmlFor="cornerIndicators"
-                  style={{ color: "#ef4444", fontSize: "12px" }}
+                  style={{
+                    color: "#ef4444",
+                    fontSize: "9px",
+                    cursor: "pointer",
+                  }}
                 >
                   Corner indicators
                 </label>
@@ -232,21 +293,20 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
             </div>
           )}
         </div>
-
-        {/* Label Size */}
+        {/* Label Size - Daha kompakt */}
         <div>
           <label
             style={{
               color: "#ccc",
               fontWeight: "500",
-              fontSize: "14px",
-              marginBottom: "8px",
+              fontSize: "11px", // FİX 4: Daha küçük font
+              marginBottom: "4px", // FİX 4: Daha az margin
               display: "block",
             }}
           >
             Label Size: {labelSize}px
           </label>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
             <input
               type="range"
               min="6"
@@ -261,27 +321,33 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
               max="48"
               value={labelSize}
               onChange={(e) => setLabelSize(Number(e.target.value))}
-              style={{ ...styles.input, width: "60px" }}
+              style={{
+                ...styles.input,
+                width: "40px",
+                fontSize: "10px",
+                padding: "2px 4px",
+              }} // FİX 4: Daha küçük
             />
           </div>
         </div>
-
-        {/* Grid Alignment */}
+        {/* Grid Alignment - Daha kompakt */}
         <div>
           <label
             style={{
               color: "#ccc",
-              fontSize: "14px",
-              marginBottom: "8px",
+              fontSize: "11px", // FİX 4: Daha küçük font
+              marginBottom: "4px", // FİX 4: Daha az margin
               display: "block",
             }}
           >
             Grid Alignment:
           </label>
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+            {" "}
+            {/* FİX 4: Daha küçük gap */}
+            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
               <span
-                style={{ color: "#ccc", minWidth: "20px", fontSize: "12px" }}
+                style={{ color: "#ccc", minWidth: "12px", fontSize: "10px" }} // FİX 4: Daha küçük
               >
                 X:
               </span>
@@ -301,12 +367,17 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
                 onChange={(e) =>
                   setGridOffset({ ...gridOffset, x: Number(e.target.value) })
                 }
-                style={{ ...styles.input, width: "50px" }}
+                style={{
+                  ...styles.input,
+                  width: "35px",
+                  fontSize: "9px",
+                  padding: "2px 3px",
+                }} // FİX 4: Daha küçük
               />
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
               <span
-                style={{ color: "#ccc", minWidth: "20px", fontSize: "12px" }}
+                style={{ color: "#ccc", minWidth: "12px", fontSize: "10px" }}
               >
                 Y:
               </span>
@@ -326,7 +397,12 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
                 onChange={(e) =>
                   setGridOffset({ ...gridOffset, y: Number(e.target.value) })
                 }
-                style={{ ...styles.input, width: "50px" }}
+                style={{
+                  ...styles.input,
+                  width: "35px",
+                  fontSize: "9px",
+                  padding: "2px 3px",
+                }} // FİX 4: Daha küçük
               />
             </div>
           </div>

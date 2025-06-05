@@ -137,7 +137,7 @@ export const getSecondaryConnections = (
   return connections;
 };
 
-// NEW: Check if a cell has sharp corners that should be avoided
+// FİX 3: Düzeltilmiş corner detection - köşenin kendisini işaretle
 export const checkForSharpCorners = (
   row: number,
   col: number,
@@ -145,43 +145,38 @@ export const checkForSharpCorners = (
 ): boolean => {
   const walkwayColor = "#16a34a";
 
-  // Check all four corner combinations
-  const corners = [
-    {
-      north: { r: row - 1, c: col },
-      east: { r: row, c: col + 1 },
-      diagonal: { r: row - 1, c: col + 1 },
-    },
-    {
-      north: { r: row - 1, c: col },
-      west: { r: row, c: col - 1 },
-      diagonal: { r: row - 1, c: col - 1 },
-    },
-    {
-      south: { r: row + 1, c: col },
-      east: { r: row, c: col + 1 },
-      diagonal: { r: row + 1, c: col + 1 },
-    },
-    {
-      south: { r: row + 1, c: col },
-      west: { r: row, c: col - 1 },
-      diagonal: { r: row + 1, c: col - 1 },
-    },
+  // Bu cell walkway olmalı
+  if (paintedCells.get(coordsToKey(row, col)) !== walkwayColor) return false;
+
+  // 4 diagonal direction kontrol et
+  const diagonals = [
+    { dr: -1, dc: 1, north: { dr: -1, dc: 0 }, east: { dr: 0, dc: 1 } }, // kuzeydoğu
+    { dr: -1, dc: -1, north: { dr: -1, dc: 0 }, west: { dr: 0, dc: -1 } }, // kuzeybatı
+    { dr: 1, dc: 1, south: { dr: 1, dc: 0 }, east: { dr: 0, dc: 1 } }, // güneydoğu
+    { dr: 1, dc: -1, south: { dr: 1, dc: 0 }, west: { dr: 0, dc: -1 } }, // güneybatı
   ];
 
-  return corners.some((corner) => {
-    const sides = Object.values(corner).slice(0, 2); // north/south + east/west
-    const diagonal = Object.values(corner)[2]; // diagonal
+  // Her diagonal için kontrol et
+  return diagonals.some((diag) => {
+    const diagCell = coordsToKey(row + diag.dr, col + diag.dc);
 
-    const bothSidesWalkable = sides.every(
-      (pos) => paintedCells.get(coordsToKey(pos.r, pos.c)) === walkwayColor
+    // Diagonal cell walkway mi?
+    if (paintedCells.get(diagCell) !== walkwayColor) return false;
+
+    // Adjacent cells de walkway mi? (L-shape oluşturuyor mu?)
+    const adjCells = Object.values(diag).slice(1); // north/south, east/west
+    const adjacentWalkable = adjCells.every(
+      (adj) =>
+        paintedCells.get(coordsToKey(row + adj.dr, col + adj.dc)) ===
+        walkwayColor
     );
-    const diagonalWalkable =
-      paintedCells.get(coordsToKey(diagonal.r, diagonal.c)) === walkwayColor;
 
-    return bothSidesWalkable && diagonalWalkable;
+    // Eğer diagonal bağlantı var VE adjacent cell'ler de walkable ise
+    // bu bir sharp corner'dır
+    return adjacentWalkable;
   });
 };
+
 export const getSmartConnections = (
   row: number,
   col: number,
@@ -279,7 +274,7 @@ export const drawCanvasGrid = (
   ctx.globalAlpha = 1;
 };
 
-// NEW: Enhanced connection drawing with movement priority visualization
+// FİX 2&3: Diagonal daha kesikli + corner indicator kalın ve belirgin
 export const drawConnectionLines = (
   ctx: CanvasRenderingContext2D,
   paintedCells: Map<string, string>,
@@ -329,11 +324,12 @@ export const drawConnectionLines = (
         paintedCells
       );
 
-      // Draw primary connections (4-way) - Green
+      // Draw primary connections (4-way) - Green, Solid
       if (showPrimary) {
         ctx.strokeStyle = "#10b981"; // Green
         ctx.lineWidth = 3 / zoom;
         ctx.globalAlpha = 0.7;
+        ctx.setLineDash([]); // Solid line
 
         primaryConnections.forEach((adj) => {
           const { x: adjX, y: adjY } = gridToCanvasCoords(
@@ -352,12 +348,12 @@ export const drawConnectionLines = (
         });
       }
 
-      // Draw secondary connections (diagonal) - Orange
+      // FİX 2: Draw secondary connections - More dashed
       if (showSecondary) {
-        ctx.strokeStyle = "#f97316"; // Orange
-        ctx.lineWidth = 2 / zoom;
-        ctx.globalAlpha = 0.5;
-        ctx.setLineDash([4, 4]); // Dotted line
+        ctx.strokeStyle = "#10b981"; // Same green as primary
+        ctx.lineWidth = 3 / zoom; // Same thickness as primary
+        ctx.globalAlpha = 0.7; // Same alpha as primary
+        ctx.setLineDash([4, 6]); // FİX 2: Daha kesikli (4px çizgi, 6px boşluk)
 
         secondaryConnections.forEach((adj) => {
           const { x: adjX, y: adjY } = gridToCanvasCoords(
@@ -378,16 +374,23 @@ export const drawConnectionLines = (
         ctx.setLineDash([]); // Reset line dash
       }
 
-      // Draw corner indicators - Red
+      // FİX 3: Draw corner indicators - Kalın kırmızı, belirgin
       if (showCorners) {
         const hasSharpCorner = checkForSharpCorners(row, col, paintedCells);
         if (hasSharpCorner) {
           ctx.strokeStyle = "#ef4444"; // Red
-          ctx.lineWidth = 2 / zoom;
-          ctx.globalAlpha = 0.8;
+          ctx.lineWidth = 4 / zoom; // FİX 3: Daha kalın çizgi
+          ctx.globalAlpha = 1.0; // FİX 3: Tam opak, daha belirgin
+          ctx.setLineDash([]); // Solid line
 
-          // Draw red border around cell
-          ctx.strokeRect(centerX + 2, centerY + 2, gridSize - 4, gridSize - 4);
+          // Draw thick red border around cell
+          const borderOffset = 1;
+          ctx.strokeRect(
+            centerX + borderOffset,
+            centerY + borderOffset,
+            gridSize - borderOffset * 2,
+            gridSize - borderOffset * 2
+          );
         }
       }
     }
@@ -459,17 +462,20 @@ export const drawPaintedCells = (
           ctx.fillText("?", drawX + gridSize / 2, drawY + gridSize / 2);
         }
       }
-      // POI indicator
+      // FİX 6: POI indicator - simge üstte, label altta
       else if (cellColor === "#dc2626") {
         if (hasLabel) {
-          // Show POI symbol
+          // Show POI symbol in upper part
           ctx.fillStyle = "#ffffff";
-          ctx.font = `${Math.max(8, gridSize * 0.4)}px Arial`;
+          ctx.font = `${Math.max(8, gridSize * 0.3)}px Arial`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillText("📍", drawX + gridSize / 2, drawY + gridSize / 2);
+          ctx.fillText("📍", drawX + gridSize / 2, drawY + gridSize * 0.3);
+
+          // Labels are handled separately in drawCellLabels function
+          // and will be positioned in the lower part
         } else {
-          // Show "?" for unlabeled POIs
+          // Show "?" for unlabeled POIs in center
           ctx.fillStyle = "#ffff00"; // Yellow for attention
           ctx.font = `bold ${Math.max(10, gridSize * 0.5)}px Arial`;
           ctx.textAlign = "center";
@@ -509,7 +515,7 @@ export const drawPaintedCells = (
   });
 };
 
-// Cell labels drawing
+// FİX 6: Cell labels drawing with POI special positioning
 export const drawCellLabels = (
   ctx: CanvasRenderingContext2D,
   cellLabels: Map<string, string[]>,
@@ -554,6 +560,7 @@ export const drawCellLabels = (
       const cellColor = paintedCells.get(cellKey);
       const hasBackground = !!cellColor;
       const labelText = labels.join(", ");
+      const isPOI = cellColor === "#dc2626";
 
       if (!hasBackground) {
         ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
@@ -561,9 +568,22 @@ export const drawCellLabels = (
       }
 
       ctx.fillStyle = hasBackground ? getContrastColor(cellColor) : labelColor;
-      ctx.fillText(labelText, drawX + gridSize / 2, drawY + gridSize / 2);
+
+      // FİX 6: POI labels in lower part to avoid overlap with 📍 symbol
+      if (isPOI) {
+        // Position label in the lower 70% of the cell
+        ctx.fillText(labelText, drawX + gridSize / 2, drawY + gridSize * 0.75);
+      } else {
+        // Normal center positioning for other cells
+        ctx.fillText(labelText, drawX + gridSize / 2, drawY + gridSize / 2);
+      }
     }
   });
+};
+
+// NEW: Export canvas as PNG
+export const exportCanvasToPNG = (canvas: HTMLCanvasElement): string => {
+  return canvas.toDataURL("image/png");
 };
 
 // NEW: CSV Export Functions
@@ -832,4 +852,12 @@ export const downloadCSV = (content: string, filename: string): void => {
     link.click();
     document.body.removeChild(link);
   }
+};
+
+// NEW: Download PNG file utility
+export const downloadPNG = (dataUrl: string, filename: string): void => {
+  const link = document.createElement("a");
+  link.download = filename;
+  link.href = dataUrl;
+  link.click();
 };

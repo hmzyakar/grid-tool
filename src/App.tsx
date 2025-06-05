@@ -4,6 +4,7 @@ import { ColorPalette, Color } from "./components/ColorPalette";
 import { FloorManagement } from "./components/FloorManagement";
 import { GridSettings } from "./components/GridSettings";
 import { ViewControls } from "./components/ViewControls";
+import { ExportPreviewModal } from "./components/ExportPreviewModal";
 import { styles } from "./styles/styles";
 import {
   NAVIGATION_COLORS,
@@ -27,6 +28,8 @@ import {
   generatePOICSV,
   generateVerticalConnectionsCSV,
   downloadCSV,
+  exportCanvasToPNG,
+  downloadPNG,
 } from "./utils/canvasUtils";
 
 interface CellData {
@@ -124,6 +127,14 @@ const GridPainter: React.FC = () => {
   const [presetColor, setPresetColor] = useState("");
   const [presetLabels, setPresetLabels] = useState("");
 
+  // FİX 5: Export preview state
+  const [showExportPreview, setShowExportPreview] = useState(false);
+  const [exportPreviewData, setExportPreviewData] = useState({
+    type: "csv" as "csv" | "json" | "png",
+    content: "",
+    filename: "",
+  });
+
   const exportSectionRef = useRef<HTMLDivElement>(null);
 
   // Floor Management Functions
@@ -209,7 +220,7 @@ const GridPainter: React.FC = () => {
 
       // If we deleted the current floor or this was the last floor
       if (newFloors.size === 0) {
-        // No floors left
+        // No floors left - allow this!
         setCurrentFloor(null);
         setPaintedCells(new Map());
         setCellLabels(new Map());
@@ -404,6 +415,9 @@ const GridPainter: React.FC = () => {
     labelColor,
     labelSize,
     showConnections,
+    showPrimaryConnections,
+    showSecondaryConnections,
+    showCornerIndicators,
   ]);
 
   // Draw on changes
@@ -836,6 +850,48 @@ const GridPainter: React.FC = () => {
     return parts.join("_") + extension;
   };
 
+  // FİX 5: Preview CSV export
+  const handlePreviewCSV = (type: "current" | "all") => {
+    if (floors.size === 0) {
+      alert("No floors to export!");
+      return;
+    }
+
+    if (!currentFloor) return;
+
+    // Save current floor data first
+    const currentKey = `${currentFloor.number}_${currentFloor.name}`;
+    const updatedFloors = new Map(floors);
+    const existing = updatedFloors.get(currentKey) || {
+      name: currentFloor.name,
+      number: currentFloor.number,
+      paintedCells: new Map(),
+      cellLabels: new Map(),
+      colorPresets: new Map(),
+      poiCategories: new Map(),
+    };
+    updatedFloors.set(currentKey, {
+      ...existing,
+      paintedCells: new Map(paintedCells),
+      cellLabels: new Map(cellLabels),
+      colorPresets: new Map(colorPresets),
+    });
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const suffix = type === "current" ? "current" : "all";
+
+    // Generate navigation grid CSV for preview
+    const navCSV = generateNavigationGridCSV(updatedFloors, type, currentFloor);
+
+    setExportPreviewData({
+      type: "csv",
+      content: navCSV,
+      filename: `navigation_grid_${timestamp}_${suffix}.csv`,
+    });
+    setShowExportPreview(true);
+  };
+
+  // FİX 5: Actual CSV export
   const handleExportCSV = (type: "current" | "all") => {
     if (floors.size === 0) {
       alert("No floors to export!");
@@ -891,6 +947,79 @@ const GridPainter: React.FC = () => {
     }
   };
 
+  // FİX 5: Preview JSON export
+  const handlePreviewJSON = () => {
+    if (floors.size === 0) {
+      alert("No floors to export!");
+      return;
+    }
+
+    if (!currentFloor) return;
+
+    // Save current floor data first
+    const currentKey = `${currentFloor.number}_${currentFloor.name}`;
+    const updatedFloors = new Map(floors);
+    const existing = updatedFloors.get(currentKey) || {
+      name: currentFloor.name,
+      number: currentFloor.number,
+      paintedCells: new Map(),
+      cellLabels: new Map(),
+      colorPresets: new Map(),
+      poiCategories: new Map(),
+    };
+    updatedFloors.set(currentKey, {
+      ...existing,
+      paintedCells: new Map(paintedCells),
+      cellLabels: new Map(cellLabels),
+      colorPresets: new Map(colorPresets),
+    });
+
+    const exportData = {
+      metadata: {
+        exportDate: new Date().toISOString(),
+        imageName,
+        gridSize,
+        zoom,
+        labelSize,
+        labelColor,
+        paintColor,
+        isGridVisible,
+        labelsVisible,
+        backgroundVisible,
+        showConnections,
+        gridOffset,
+        canvasOffset,
+        totalFloors: updatedFloors.size,
+      },
+      currentFloor,
+      floors: Object.fromEntries(
+        Array.from(updatedFloors.entries()).map(([key, floor]) => [
+          key,
+          {
+            name: floor.name,
+            number: floor.number,
+            paintedCells: Array.from(floor.paintedCells.entries()),
+            cellLabels: Array.from(floor.cellLabels.entries()),
+            colorPresets: Array.from(floor.colorPresets.entries()),
+            poiCategories: Array.from(
+              (poiCategories.get(key) || new Map()).entries()
+            ),
+          },
+        ])
+      ),
+    };
+
+    const filename = generateFileName(".json", "project");
+
+    setExportPreviewData({
+      type: "json",
+      content: JSON.stringify(exportData, null, 2),
+      filename,
+    });
+    setShowExportPreview(true);
+  };
+
+  // FİX 5: Actual JSON export
   const handleExportJSON = () => {
     if (floors.size === 0) {
       alert("No floors to export!");
@@ -966,6 +1095,50 @@ const GridPainter: React.FC = () => {
     }
   };
 
+  // FİX 5: Preview PNG export
+  const handlePreviewPNG = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const dataUrl = exportCanvasToPNG(canvas);
+    const filename = generateFileName(".png", "canvas");
+
+    setExportPreviewData({
+      type: "png",
+      content: dataUrl,
+      filename,
+    });
+    setShowExportPreview(true);
+  };
+
+  // FİX 5: Actual PNG export
+  const handleExportPNG = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const dataUrl = exportCanvasToPNG(canvas);
+    const filename = generateFileName(".png", "canvas");
+    downloadPNG(dataUrl, filename);
+  };
+
+  // FİX 5: Export preview download handler
+  const handleExportPreviewDownload = () => {
+    if (exportPreviewData.type === "csv") {
+      downloadCSV(exportPreviewData.content, exportPreviewData.filename);
+    } else if (exportPreviewData.type === "json") {
+      const blob = new Blob([exportPreviewData.content], {
+        type: "application/json",
+      });
+      const link = document.createElement("a");
+      link.download = exportPreviewData.filename;
+      link.href = URL.createObjectURL(blob);
+      link.click();
+    } else if (exportPreviewData.type === "png") {
+      downloadPNG(exportPreviewData.content, exportPreviewData.filename);
+    }
+    setShowExportPreview(false);
+  };
+
   return (
     <div style={styles.globalContainer}>
       <div style={styles.container}>
@@ -1021,6 +1194,7 @@ const GridPainter: React.FC = () => {
               <label
                 htmlFor="jsonImport"
                 style={{ ...styles.button, ...styles.primaryButton }}
+                title="Import JSON project file exported from Grid Painter" // FİX 8: Açıklama eklendi
               >
                 <Icons.FileText size={16} />
                 Import Project
@@ -1045,29 +1219,35 @@ const GridPainter: React.FC = () => {
             </div>
           </div>
 
-          {/* Main Layout: Left Controls + Canvas + Right Colors */}
+          {/* Floor Management moved to top, horizontal layout */}
+          <FloorManagement
+            currentFloor={currentFloor}
+            floors={floors}
+            onCreateFloor={createFloor}
+            onSwitchFloor={switchFloor}
+            onDeleteFloor={deleteFloor}
+            paintedCells={paintedCells}
+            cellLabels={cellLabels}
+          />
+
+          {/* Main Layout: Compact Left Controls + Canvas + Right Colors */}
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "240px 1fr 200px",
+              gridTemplateColumns: "200px 1fr 220px",
               gap: "16px",
               marginBottom: "20px",
+              alignItems: "start",
             }}
           >
-            {/* Left Side - Controls (3 boxes stacked) */}
+            {/* Left Side - Compact Controls */}
             <div
-              style={{ display: "flex", flexDirection: "column", gap: "20px" }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "16px",
+              }}
             >
-              <FloorManagement
-                currentFloor={currentFloor}
-                floors={floors}
-                onCreateFloor={createFloor}
-                onSwitchFloor={switchFloor}
-                onDeleteFloor={deleteFloor}
-                paintedCells={paintedCells}
-                cellLabels={cellLabels}
-              />
-
               <GridSettings
                 gridSize={gridSize}
                 setGridSize={setGridSize}
@@ -1141,7 +1321,7 @@ const GridPainter: React.FC = () => {
               </div>
             </div>
 
-            {/* Right Side - Color Palette */}
+            {/* Right Side - Enhanced Color Palette */}
             <ColorPalette
               colors={NAVIGATION_COLORS}
               paintColor={paintColor}
@@ -1156,7 +1336,7 @@ const GridPainter: React.FC = () => {
             />
           </div>
 
-          {/* Action Buttons */}
+          {/* FİX 5: Action Buttons with Preview options */}
           <div
             style={{
               display: "flex",
@@ -1169,45 +1349,101 @@ const GridPainter: React.FC = () => {
               flexWrap: "wrap",
             }}
           >
-            {/* Export CSV Buttons */}
-            <button
-              onClick={() => handleExportCSV("current")}
-              disabled={!currentFloor}
-              style={{
-                ...styles.button,
-                ...styles.successButton,
-                opacity: !currentFloor ? 0.5 : 1,
-              }}
-            >
-              <Icons.Download size={16} />
-              Export Current Floor CSV
-            </button>
+            {/* Export Preview Buttons */}
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <button
+                onClick={() => handlePreviewCSV("current")}
+                disabled={!currentFloor}
+                style={{
+                  ...styles.button,
+                  ...styles.primaryButton,
+                  opacity: !currentFloor ? 0.5 : 1,
+                  fontSize: "12px",
+                }}
+              >
+                <Icons.FileText size={14} />
+                Preview CSV
+              </button>
 
-            <button
-              onClick={() => handleExportCSV("all")}
-              disabled={floors.size === 0}
-              style={{
-                ...styles.button,
-                ...styles.successButton,
-                opacity: floors.size === 0 ? 0.5 : 1,
-              }}
-            >
-              <Icons.Download size={16} />
-              Export All Floors CSV
-            </button>
+              <button
+                onClick={handlePreviewJSON}
+                disabled={floors.size === 0}
+                style={{
+                  ...styles.button,
+                  ...styles.primaryButton,
+                  opacity: floors.size === 0 ? 0.5 : 1,
+                  fontSize: "12px",
+                }}
+              >
+                <Icons.FileText size={14} />
+                Preview JSON
+              </button>
 
-            <button
-              onClick={handleExportJSON}
-              disabled={floors.size === 0}
+              <button
+                onClick={handlePreviewPNG}
+                style={{
+                  ...styles.button,
+                  ...styles.primaryButton,
+                  fontSize: "12px",
+                }}
+              >
+                <Icons.FileText size={14} />
+                Preview PNG
+              </button>
+            </div>
+
+            {/* Separator */}
+            <div
               style={{
-                ...styles.button,
-                ...styles.successButton,
-                opacity: floors.size === 0 ? 0.5 : 1,
+                width: "1px",
+                backgroundColor: "#555",
+                margin: "0 8px",
+                alignSelf: "stretch",
               }}
-            >
-              <Icons.FileText size={16} />
-              Export Project JSON
-            </button>
+            />
+
+            {/* Export Direct Buttons */}
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <button
+                onClick={() => handleExportCSV("current")}
+                disabled={!currentFloor}
+                style={{
+                  ...styles.button,
+                  ...styles.successButton,
+                  opacity: !currentFloor ? 0.5 : 1,
+                  fontSize: "12px",
+                }}
+              >
+                <Icons.Download size={14} />
+                Export CSV
+              </button>
+
+              <button
+                onClick={handleExportJSON}
+                disabled={floors.size === 0}
+                style={{
+                  ...styles.button,
+                  ...styles.successButton,
+                  opacity: floors.size === 0 ? 0.5 : 1,
+                  fontSize: "12px",
+                }}
+              >
+                <Icons.Download size={14} />
+                Export JSON
+              </button>
+
+              <button
+                onClick={handleExportPNG}
+                style={{
+                  ...styles.button,
+                  ...styles.successButton,
+                  fontSize: "12px",
+                }}
+              >
+                <Icons.Download size={14} />
+                Export PNG
+              </button>
+            </div>
 
             {/* Separator */}
             <div
@@ -1220,44 +1456,49 @@ const GridPainter: React.FC = () => {
             />
 
             {/* Clear Buttons */}
-            <button
-              onClick={() => handleClearRequest("painted")}
-              disabled={!currentFloor}
-              style={{
-                ...styles.button,
-                ...styles.warningButton,
-                opacity: !currentFloor ? 0.5 : 1,
-              }}
-            >
-              <Icons.RotateCcw size={16} />
-              Clear Painted
-            </button>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <button
+                onClick={() => handleClearRequest("painted")}
+                disabled={!currentFloor}
+                style={{
+                  ...styles.button,
+                  ...styles.warningButton,
+                  opacity: !currentFloor ? 0.5 : 1,
+                  fontSize: "12px",
+                }}
+              >
+                <Icons.RotateCcw size={14} />
+                Clear Painted
+              </button>
 
-            <button
-              onClick={() => handleClearRequest("labels")}
-              disabled={!currentFloor}
-              style={{
-                ...styles.button,
-                ...styles.warningButton,
-                opacity: !currentFloor ? 0.5 : 1,
-              }}
-            >
-              <Icons.Type size={16} />
-              Clear Labels
-            </button>
+              <button
+                onClick={() => handleClearRequest("labels")}
+                disabled={!currentFloor}
+                style={{
+                  ...styles.button,
+                  ...styles.warningButton,
+                  opacity: !currentFloor ? 0.5 : 1,
+                  fontSize: "12px",
+                }}
+              >
+                <Icons.Type size={14} />
+                Clear Labels
+              </button>
 
-            <button
-              onClick={() => handleClearRequest("all")}
-              disabled={!currentFloor}
-              style={{
-                ...styles.button,
-                ...styles.dangerButton,
-                opacity: !currentFloor ? 0.5 : 1,
-              }}
-            >
-              <Icons.X size={16} />
-              Clear All
-            </button>
+              <button
+                onClick={() => handleClearRequest("all")}
+                disabled={!currentFloor}
+                style={{
+                  ...styles.button,
+                  ...styles.dangerButton,
+                  opacity: !currentFloor ? 0.5 : 1,
+                  fontSize: "12px",
+                }}
+              >
+                <Icons.X size={14} />
+                Clear All
+              </button>
+            </div>
           </div>
 
           {/* Instructions */}
@@ -1308,8 +1549,8 @@ const GridPainter: React.FC = () => {
                 connections (smart pathfinding)
               </li>
               <li>
-                <strong>Export:</strong> Generate 3 CSV files for AI navigation
-                systems
+                <strong>Export:</strong> Preview and generate CSV, JSON, and PNG
+                files
               </li>
               <li>
                 <strong>Controls:</strong> Ctrl+drag to pan, Ctrl+wheel to zoom,
@@ -1419,6 +1660,16 @@ const GridPainter: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* FİX 5: Export Preview Modal */}
+      <ExportPreviewModal
+        isOpen={showExportPreview}
+        onClose={() => setShowExportPreview(false)}
+        exportType={exportPreviewData.type}
+        content={exportPreviewData.content}
+        onDownload={handleExportPreviewDownload}
+        filename={exportPreviewData.filename}
+      />
 
       {/* Modals */}
       {showLabelModal && (
