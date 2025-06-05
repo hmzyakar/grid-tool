@@ -95,10 +95,6 @@ const GridPainter: React.FC = () => {
   const [labelsVisible, setLabelsVisible] = useState(true);
   const [backgroundVisible, setBackgroundVisible] = useState(true);
   const [showConnections, setShowConnections] = useState(true);
-  const [showPrimaryConnections, setShowPrimaryConnections] = useState(true);
-  const [showSecondaryConnections, setShowSecondaryConnections] =
-    useState(true);
-  const [showCornerIndicators, setShowCornerIndicators] = useState(true);
   const [gridOffset, setGridOffset] = useState({ x: 0, y: 0 });
   const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -347,6 +343,11 @@ const GridPainter: React.FC = () => {
         e.preventDefault();
         const delta = e.deltaY > 0 ? -0.1 : 0.1;
         setZoom((prev) => Math.max(0.1, Math.min(10, prev + delta)));
+      } else if (e.altKey) {
+        // Alt + wheel = fast zoom
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -0.3 : 0.3;
+        setZoom((prev) => Math.max(0.1, Math.min(10, prev + delta)));
       }
     };
 
@@ -446,10 +447,7 @@ const GridPainter: React.FC = () => {
       gridSize,
       showConnections,
       zoom,
-      canvasOffset,
-      showPrimaryConnections,
-      showSecondaryConnections,
-      showCornerIndicators
+      canvasOffset
     );
 
     // Draw cell labels
@@ -482,9 +480,6 @@ const GridPainter: React.FC = () => {
     labelColor,
     labelSize,
     showConnections,
-    showPrimaryConnections,
-    showSecondaryConnections,
-    showCornerIndicators,
   ]);
 
   // Draw on changes
@@ -801,11 +796,6 @@ const GridPainter: React.FC = () => {
 
   // Image upload - floor specific
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!currentFloor) {
-      alert("Please create or select a floor first!");
-      return;
-    }
-
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -829,12 +819,10 @@ const GridPainter: React.FC = () => {
 
   // Remove image with confirmation - floor specific
   const handleRemoveImageRequest = () => {
-    if (!currentFloor) return;
     setShowRemoveImageConfirm(true);
   };
 
   const handleRemoveImageConfirm = () => {
-    if (!currentFloor) return;
     setFloorImages((prev) => {
       const newMap = new Map(prev);
       newMap.delete(currentFloorKey);
@@ -918,6 +906,7 @@ const GridPainter: React.FC = () => {
               setShowConnections(meta.showConnections);
             if (meta.gridOffset) setGridOffset(meta.gridOffset);
             if (meta.canvasOffset) setCanvasOffset(meta.canvasOffset);
+            // Legacy pathway settings are ignored
           }
 
           alert(`Successfully imported ${newFloors.size} floors!`);
@@ -1245,7 +1234,7 @@ const GridPainter: React.FC = () => {
             Grid Painter
           </h1>
 
-          {/* Upload Section - Full Width */}
+          {/* Import Section */}
           <div style={styles.section}>
             <h3
               style={{
@@ -1259,25 +1248,10 @@ const GridPainter: React.FC = () => {
               }}
             >
               <Icons.Upload size={18} />
-              Upload & Import
+              Import Project
             </h3>
 
             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                style={{ display: "none" }}
-                id="imageUpload"
-              />
-              <label
-                htmlFor="imageUpload"
-                style={{ ...styles.button, ...styles.primaryButton }}
-              >
-                <Icons.Upload size={16} />
-                Upload Image
-              </label>
-
               <input
                 type="file"
                 accept=".json"
@@ -1293,239 +1267,10 @@ const GridPainter: React.FC = () => {
                 <Icons.FileText size={16} />
                 Import Project (.json)
               </label>
-
-              {backgroundImage && (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                  }}
-                >
-                  <div
-                    style={{
-                      color: "#10b981",
-                      fontSize: "14px",
-                      padding: "8px 12px",
-                      backgroundColor: "#064e3b",
-                      border: "1px solid #10b981",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    ✅ Image loaded: {currentImageName}
-                  </div>
-
-                  {/* Statistics below canvas - horizontal layout */}
-                  {currentFloor && (
-                    <div
-                      style={{
-                        backgroundColor: "#262626",
-                        border: "1px solid #404040",
-                        padding: "12px 16px",
-                        marginBottom: "20px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "24px",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            backgroundColor: "#16a34a",
-                            color: "#fff",
-                            padding: "4px 10px",
-                            fontSize: "12px",
-                            fontWeight: "600",
-                            borderRadius: "4px",
-                            minWidth: "24px",
-                            textAlign: "center",
-                          }}
-                        >
-                          {
-                            Array.from(paintedCells.entries()).filter(
-                              ([_, color]) => color === "#16a34a"
-                            ).length
-                          }
-                        </div>
-                        <span
-                          style={{
-                            color: "#ccc",
-                            fontSize: "13px",
-                            fontWeight: "500",
-                          }}
-                        >
-                          Walkways
-                        </span>
-                      </div>
-
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            backgroundColor: "#dc2626",
-                            color: "#fff",
-                            padding: "4px 10px",
-                            fontSize: "12px",
-                            fontWeight: "600",
-                            borderRadius: "4px",
-                            minWidth: "24px",
-                            textAlign: "center",
-                          }}
-                        >
-                          {
-                            Array.from(paintedCells.entries()).filter(
-                              ([_, color]) => color === "#dc2626"
-                            ).length
-                          }
-                        </div>
-                        <span
-                          style={{
-                            color: "#ccc",
-                            fontSize: "13px",
-                            fontWeight: "500",
-                          }}
-                        >
-                          POIs
-                        </span>
-                      </div>
-
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            backgroundColor: "#2563eb",
-                            color: "#fff",
-                            padding: "4px 10px",
-                            fontSize: "12px",
-                            fontWeight: "600",
-                            borderRadius: "4px",
-                            minWidth: "24px",
-                            textAlign: "center",
-                          }}
-                        >
-                          {
-                            Array.from(paintedCells.entries()).filter(
-                              ([_, color]) =>
-                                ["#2563eb", "#ea580c", "#7c3aed"].includes(
-                                  color
-                                )
-                            ).length
-                          }
-                        </div>
-                        <span
-                          style={{
-                            color: "#ccc",
-                            fontSize: "13px",
-                            fontWeight: "500",
-                          }}
-                        >
-                          Vertical Connections
-                        </span>
-                      </div>
-
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            backgroundColor: "#16a34a",
-                            color: "#fff",
-                            padding: "4px 10px",
-                            fontSize: "12px",
-                            fontWeight: "600",
-                            borderRadius: "4px",
-                            minWidth: "24px",
-                            textAlign: "center",
-                          }}
-                        >
-                          {cellLabels.size}
-                        </div>
-                        <span
-                          style={{
-                            color: "#ccc",
-                            fontSize: "13px",
-                            fontWeight: "500",
-                          }}
-                        >
-                          Labeled Cells
-                        </span>
-                      </div>
-
-                      {backgroundImage && (
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                          }}
-                        >
-                          <div
-                            style={{
-                              backgroundColor: "#7c3aed",
-                              color: "#fff",
-                              padding: "4px 10px",
-                              fontSize: "12px",
-                              fontWeight: "600",
-                              borderRadius: "4px",
-                            }}
-                          >
-                            📷
-                          </div>
-                          <span
-                            style={{
-                              color: "#ccc",
-                              fontSize: "13px",
-                              fontWeight: "500",
-                            }}
-                          >
-                            {currentImageName}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <button
-                    onClick={handleRemoveImageRequest}
-                    style={{
-                      ...styles.button,
-                      ...styles.dangerButton,
-                      fontSize: "12px",
-                      padding: "8px 12px",
-                    }}
-                  >
-                    <Icons.X size={14} />
-                    Remove Image
-                  </button>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Floor Management moved to top, horizontal layout */}
+          {/* Floor Management */}
           <FloorManagement
             currentFloor={currentFloor}
             floors={floors}
@@ -1537,12 +1282,324 @@ const GridPainter: React.FC = () => {
             cellLabels={cellLabels}
           />
 
+          {/* Statistics section - always visible when floor exists */}
+          {currentFloor && (
+            <div
+              style={{
+                backgroundColor: "#262626",
+                border: "1px solid #404040",
+                padding: "12px 16px",
+                marginBottom: "20px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "24px",
+                flexWrap: "wrap",
+                borderRadius: "6px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: "#16a34a",
+                    color: "#fff",
+                    padding: "4px 10px",
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    borderRadius: "4px",
+                    minWidth: "24px",
+                    textAlign: "center",
+                  }}
+                >
+                  {
+                    Array.from(paintedCells.entries()).filter(
+                      ([_, color]) => color === "#16a34a"
+                    ).length
+                  }
+                </div>
+                <span
+                  style={{
+                    color: "#ccc",
+                    fontSize: "13px",
+                    fontWeight: "500",
+                  }}
+                >
+                  Walkways
+                </span>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: "#dc2626",
+                    color: "#fff",
+                    padding: "4px 10px",
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    borderRadius: "4px",
+                    minWidth: "24px",
+                    textAlign: "center",
+                  }}
+                >
+                  {
+                    Array.from(paintedCells.entries()).filter(
+                      ([_, color]) => color === "#dc2626"
+                    ).length
+                  }
+                </div>
+                <span
+                  style={{
+                    color: "#ccc",
+                    fontSize: "13px",
+                    fontWeight: "500",
+                  }}
+                >
+                  POIs
+                </span>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: "#2563eb",
+                    color: "#fff",
+                    padding: "4px 10px",
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    borderRadius: "4px",
+                    minWidth: "24px",
+                    textAlign: "center",
+                  }}
+                >
+                  {
+                    Array.from(paintedCells.entries()).filter(([_, color]) =>
+                      ["#2563eb", "#ea580c", "#7c3aed"].includes(color)
+                    ).length
+                  }
+                </div>
+                <span
+                  style={{
+                    color: "#ccc",
+                    fontSize: "13px",
+                    fontWeight: "500",
+                  }}
+                >
+                  Vertical Connections
+                </span>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: "#16a34a",
+                    color: "#fff",
+                    padding: "4px 10px",
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    borderRadius: "4px",
+                    minWidth: "24px",
+                    textAlign: "center",
+                  }}
+                >
+                  {cellLabels.size}
+                </div>
+                <span
+                  style={{
+                    color: "#ccc",
+                    fontSize: "13px",
+                    fontWeight: "500",
+                  }}
+                >
+                  Labeled Cells
+                </span>
+              </div>
+
+              {backgroundImage && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <div
+                    style={{
+                      backgroundColor: "#7c3aed",
+                      color: "#fff",
+                      padding: "4px 10px",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    📷
+                  </div>
+                  <span
+                    style={{
+                      color: "#ccc",
+                      fontSize: "13px",
+                      fontWeight: "500",
+                    }}
+                  >
+                    {currentImageName}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Image Upload Section - Floor specific */}
+          {currentFloor && (
+            <div style={styles.section}>
+              <h3
+                style={{
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  color: "#ffffff",
+                  marginBottom: "16px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <Icons.Upload size={18} />
+                Floor Background Image
+              </h3>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "12px",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                }}
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  style={{ display: "none" }}
+                  id="imageUpload"
+                />
+                <label
+                  htmlFor="imageUpload"
+                  style={{ ...styles.button, ...styles.primaryButton }}
+                >
+                  <Icons.Upload size={16} />
+                  Upload Image
+                </label>
+
+                {backgroundImage && (
+                  <>
+                    <div
+                      style={{
+                        color: "#10b981",
+                        fontSize: "14px",
+                        padding: "8px 12px",
+                        backgroundColor: "#064e3b",
+                        border: "1px solid #10b981",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      ✅ Image loaded: {currentImageName}
+                    </div>
+
+                    <button
+                      onClick={handleRemoveImageRequest}
+                      style={{
+                        ...styles.button,
+                        ...styles.dangerButton,
+                        fontSize: "12px",
+                        padding: "8px 12px",
+                      }}
+                    >
+                      <Icons.X size={14} />
+                      Remove Image
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* No floor warning for image upload */}
+          {!currentFloor && (
+            <div style={styles.section}>
+              <h3
+                style={{
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  color: "#ffffff",
+                  marginBottom: "16px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <Icons.Upload size={18} />
+                Floor Background Image
+              </h3>
+
+              <div
+                style={{
+                  backgroundColor: "#1f2937",
+                  border: "1px solid #374151",
+                  borderLeft: "4px solid #fbbf24",
+                  padding: "16px",
+                  borderRadius: "6px",
+                }}
+              >
+                <div
+                  style={{
+                    color: "#fbbf24",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    marginBottom: "8px",
+                  }}
+                >
+                  ⚠️ Floor Required
+                </div>
+                <div style={{ color: "#ccc", fontSize: "14px" }}>
+                  Please create or select a floor first to upload a background
+                  image.
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Main Layout: Compact Left Controls + Canvas + Right Colors */}
           <div
             style={{
               display: "grid",
               gridTemplateColumns: "240px 1fr 240px",
-              gap: "12px",
+              gap: "8px",
               marginBottom: "20px",
               alignItems: "start",
             }}
@@ -1566,12 +1623,6 @@ const GridPainter: React.FC = () => {
                 setBackgroundVisible={setBackgroundVisible}
                 showConnections={showConnections}
                 setShowConnections={setShowConnections}
-                showPrimaryConnections={showPrimaryConnections}
-                setShowPrimaryConnections={setShowPrimaryConnections}
-                showSecondaryConnections={showSecondaryConnections}
-                setShowSecondaryConnections={setShowSecondaryConnections}
-                showCornerIndicators={showCornerIndicators}
-                setShowCornerIndicators={setShowCornerIndicators}
                 labelSize={labelSize}
                 setLabelSize={setLabelSize}
                 gridOffset={gridOffset}
@@ -1591,7 +1642,7 @@ const GridPainter: React.FC = () => {
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
-                padding: "16px 8px", // Reduced horizontal padding
+                padding: "16px 4px",
                 backgroundColor: "#1a1a1a",
                 border: "1px solid #333",
               }}
@@ -1830,10 +1881,11 @@ const GridPainter: React.FC = () => {
             >
               <li>
                 <strong>🏢 Create Floors:</strong> Start by creating your first
-                floor
+                floor to begin mapping
               </li>
               <li>
-                <strong>🟢 Walkway (Green):</strong> Mark navigable paths
+                <strong>🟢 Walkway (Green):</strong> Mark navigable paths for
+                pedestrian movement
               </li>
               <li>
                 <strong>🔴 POI (Red):</strong> Mark points of interest,
@@ -1852,8 +1904,9 @@ const GridPainter: React.FC = () => {
                 ID (e.g., ESC_001)
               </li>
               <li>
-                <strong>Connection Lines:</strong> Toggle to see walkway
-                connections (smart pathfinding)
+                <strong>Smart Pathways:</strong> Toggle to see walkway
+                connections with intelligent routing (4-way priority, diagonal
+                as fallback)
               </li>
               <li>
                 <strong>Export:</strong> Generates 3 CSV files: Navigation Grid
@@ -1861,8 +1914,8 @@ const GridPainter: React.FC = () => {
                 Vertical Connections (elevator/stairs between floors)
               </li>
               <li>
-                <strong>Controls:</strong> Ctrl+drag to pan, Ctrl+wheel to zoom,
-                right-click to label
+                <strong>Controls:</strong> Ctrl+wheel = zoom, Alt+wheel = fast
+                zoom, Ctrl+drag = pan, right-click = label
               </li>
             </ul>
           </div>
@@ -2026,8 +2079,8 @@ const GridPainter: React.FC = () => {
         </div>
       )}
 
-      {/* Modals */}
-      {showLabelModal && (
+      {/* Label Modal */}
+      {showLabelModal && labelModalCell && (
         <div style={styles.modal}>
           <div style={styles.modalContent}>
             <h3
@@ -2043,7 +2096,7 @@ const GridPainter: React.FC = () => {
             <p
               style={{ color: "#ccc", marginBottom: "12px", fontSize: "14px" }}
             >
-              Cell: ({labelModalCell?.row}, {labelModalCell?.col}) on{" "}
+              Cell: ({labelModalCell.row}, {labelModalCell.col}) on{" "}
               {currentFloor?.name}
             </p>
 
@@ -2071,35 +2124,34 @@ const GridPainter: React.FC = () => {
             </div>
 
             {/* POI Category (only for POI cells) */}
-            {labelModalCell &&
-              paintedCells.get(
-                coordsToKey(labelModalCell.row, labelModalCell.col)
-              ) === "#dc2626" && (
-                <div style={{ marginBottom: "16px" }}>
-                  <label
-                    style={{
-                      color: "#fbbf24",
-                      fontSize: "14px",
-                      marginBottom: "8px",
-                      display: "block",
-                    }}
-                  >
-                    📍 POI Category:
-                  </label>
-                  <select
-                    value={tempPOICategory}
-                    onChange={(e) => setTempPOICategory(e.target.value)}
-                    style={{ ...styles.input, width: "100%" }}
-                  >
-                    <option value="">Select Category...</option>
-                    {POI_CATEGORIES.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+            {paintedCells.get(
+              coordsToKey(labelModalCell.row, labelModalCell.col)
+            ) === "#dc2626" && (
+              <div style={{ marginBottom: "16px" }}>
+                <label
+                  style={{
+                    color: "#fbbf24",
+                    fontSize: "14px",
+                    marginBottom: "8px",
+                    display: "block",
+                  }}
+                >
+                  📍 POI Category:
+                </label>
+                <select
+                  value={tempPOICategory}
+                  onChange={(e) => setTempPOICategory(e.target.value)}
+                  style={{ ...styles.input, width: "100%" }}
+                >
+                  <option value="">Select Category...</option>
+                  {POI_CATEGORIES.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div
               style={{
@@ -2125,6 +2177,7 @@ const GridPainter: React.FC = () => {
         </div>
       )}
 
+      {/* Clear Confirmation Modal */}
       {showClearConfirm && (
         <div style={styles.modal}>
           <div style={styles.modalContent}>
@@ -2171,6 +2224,7 @@ const GridPainter: React.FC = () => {
         </div>
       )}
 
+      {/* Preset Modal */}
       {showPresetModal && (
         <div style={styles.modal}>
           <div style={styles.modalContent}>

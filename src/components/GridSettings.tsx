@@ -13,12 +13,6 @@ interface GridSettingsProps {
   setBackgroundVisible: (visible: boolean) => void;
   showConnections: boolean;
   setShowConnections: (show: boolean) => void;
-  showPrimaryConnections: boolean;
-  setShowPrimaryConnections: (show: boolean) => void;
-  showSecondaryConnections: boolean;
-  setShowSecondaryConnections: (show: boolean) => void;
-  showCornerIndicators: boolean;
-  setShowCornerIndicators: (show: boolean) => void;
   labelSize: number;
   setLabelSize: (size: number) => void;
   gridOffset: { x: number; y: number };
@@ -36,12 +30,6 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
   setBackgroundVisible,
   showConnections,
   setShowConnections,
-  showPrimaryConnections,
-  setShowPrimaryConnections,
-  showSecondaryConnections,
-  setShowSecondaryConnections,
-  showCornerIndicators,
-  setShowCornerIndicators,
   labelSize,
   setLabelSize,
   gridOffset,
@@ -197,7 +185,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
               <label
                 htmlFor="pathwaysVisible"
                 style={{
-                  color: "#ccc",
+                  color: "#10b981",
                   fontWeight: "500",
                   fontSize: "12px",
                   cursor: "pointer",
@@ -207,88 +195,6 @@ export const GridSettings: React.FC<GridSettingsProps> = ({
               </label>
             </div>
           </div>
-
-          {/* Movement Priority Sub-options - More readable */}
-          {showConnections && (
-            <div
-              style={{
-                marginTop: "8px",
-                paddingLeft: "10px",
-                borderLeft: "2px solid #444",
-                display: "grid",
-                gridTemplateColumns: "1fr",
-                gap: "4px",
-              }}
-            >
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "6px" }}
-              >
-                <input
-                  type="checkbox"
-                  id="primaryConnections"
-                  checked={showPrimaryConnections}
-                  onChange={(e) => setShowPrimaryConnections(e.target.checked)}
-                  style={{ width: "11px", height: "11px" }}
-                />
-                <label
-                  htmlFor="primaryConnections"
-                  style={{
-                    color: "#10b981",
-                    fontSize: "11px",
-                    cursor: "pointer",
-                  }}
-                >
-                  Primary (4-way)
-                </label>
-              </div>
-
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "6px" }}
-              >
-                <input
-                  type="checkbox"
-                  id="secondaryConnections"
-                  checked={showSecondaryConnections}
-                  onChange={(e) =>
-                    setShowSecondaryConnections(e.target.checked)
-                  }
-                  style={{ width: "11px", height: "11px" }}
-                />
-                <label
-                  htmlFor="secondaryConnections"
-                  style={{
-                    color: "#10b981",
-                    fontSize: "11px",
-                    cursor: "pointer",
-                  }}
-                >
-                  Secondary (diagonal)
-                </label>
-              </div>
-
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "6px" }}
-              >
-                <input
-                  type="checkbox"
-                  id="cornerIndicators"
-                  checked={showCornerIndicators}
-                  onChange={(e) => setShowCornerIndicators(e.target.checked)}
-                  style={{ width: "11px", height: "11px" }}
-                />
-                <label
-                  htmlFor="cornerIndicators"
-                  style={{
-                    color: "#ef4444",
-                    fontSize: "11px",
-                    cursor: "pointer",
-                  }}
-                >
-                  Corner indicators
-                </label>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Label Size - More readable */}

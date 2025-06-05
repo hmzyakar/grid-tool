@@ -72,21 +72,41 @@ export const FloorManagement: React.FC<FloorManagementProps> = ({
       <div style={styles.section}>
         <h3
           style={{
-            fontSize: "16px",
+            fontSize: "18px", // Bigger header for prominence
             fontWeight: "600",
             color: "#ffffff",
-            marginBottom: "16px",
+            marginBottom: "20px",
             display: "flex",
             alignItems: "center",
             gap: "8px",
+            textAlign: "center",
           }}
         >
-          🏢 Floor Management
+          🏢 Step 1: Create Your First Floor
         </h3>
 
-        <div style={{ textAlign: "center", padding: "20px" }}>
-          <p style={{ color: "#888", marginBottom: "20px", fontSize: "14px" }}>
-            No floors created yet
+        <div
+          style={{
+            textAlign: "center",
+            padding: "24px",
+            backgroundColor: "#1f2937",
+            border: "2px solid #10b981",
+            borderRadius: "8px",
+          }}
+        >
+          <div
+            style={{
+              color: "#10b981",
+              fontSize: "16px",
+              fontWeight: "600",
+              marginBottom: "8px",
+            }}
+          >
+            🚀 Welcome to Grid Painter!
+          </div>
+          <p style={{ color: "#ccc", marginBottom: "24px", fontSize: "14px" }}>
+            Start by creating your first floor to begin mapping your indoor
+            navigation grid.
           </p>
 
           <div
@@ -96,36 +116,54 @@ export const FloorManagement: React.FC<FloorManagementProps> = ({
               alignItems: "center",
               justifyContent: "center",
               flexWrap: "wrap",
+              marginBottom: "16px",
             }}
           >
             <input
               type="text"
-              placeholder="Floor name (e.g., Ground Floor)"
+              placeholder="Floor name (e.g., Ground Floor, Lobby)"
               value={newFloorName}
               onChange={(e) => setNewFloorName(e.target.value)}
-              style={{ ...styles.input, minWidth: "200px" }}
+              style={{
+                ...styles.input,
+                minWidth: "240px",
+                fontSize: "14px",
+                padding: "10px 12px",
+              }}
+              onKeyDown={(e) => e.key === "Enter" && handleCreateFloor()}
+              autoFocus
             />
             <input
               type="number"
-              placeholder="Number"
+              placeholder="Floor #"
               value={newFloorNumber}
               onChange={(e) => setNewFloorNumber(Number(e.target.value))}
-              style={{ ...styles.input, width: "80px" }}
-            />
-            <button
-              onClick={handleCreateFloor}
-              disabled={!newFloorName.trim()}
               style={{
-                ...styles.button,
-                ...styles.successButton,
+                ...styles.input,
+                width: "100px",
                 fontSize: "14px",
-                opacity: !newFloorName.trim() ? 0.5 : 1,
+                padding: "10px 12px",
               }}
-            >
-              <Icons.Plus size={16} />
-              Create First Floor
-            </button>
+              onKeyDown={(e) => e.key === "Enter" && handleCreateFloor()}
+            />
           </div>
+
+          <button
+            onClick={handleCreateFloor}
+            disabled={!newFloorName.trim()}
+            style={{
+              ...styles.button,
+              ...styles.successButton,
+              fontSize: "16px",
+              padding: "12px 24px",
+              opacity: !newFloorName.trim() ? 0.5 : 1,
+              cursor: !newFloorName.trim() ? "not-allowed" : "pointer",
+              minWidth: "200px",
+            }}
+          >
+            <Icons.Plus size={18} />
+            Create First Floor
+          </button>
         </div>
       </div>
     );
@@ -207,6 +245,7 @@ export const FloorManagement: React.FC<FloorManagementProps> = ({
                 fontSize: "13px",
                 padding: "6px 8px",
               }}
+              onKeyDown={(e) => e.key === "Enter" && handleCreateFloor()}
             />
             <input
               type="number"
@@ -219,6 +258,7 @@ export const FloorManagement: React.FC<FloorManagementProps> = ({
                 fontSize: "13px",
                 padding: "6px 8px",
               }}
+              onKeyDown={(e) => e.key === "Enter" && handleCreateFloor()}
             />
             <button
               onClick={handleCreateFloor}

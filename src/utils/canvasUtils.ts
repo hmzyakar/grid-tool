@@ -65,8 +65,8 @@ export const resizeImageToFit = (
   };
 };
 
-// NEW: Get primary (4-way) connections only
-export const getPrimaryConnections = (
+// Get smart connections - both 4-way and diagonal
+export const getSmartConnections = (
   row: number,
   col: number,
   paintedCells: Map<string, string>
@@ -74,7 +74,7 @@ export const getPrimaryConnections = (
   const walkwayColor = "#16a34a";
   const connections: { direction: string; row: number; col: number }[] = [];
 
-  // 4-way directions only
+  // 4-way directions (primary)
   const primary = [
     { name: "kuzey", dr: -1, dc: 0 },
     { name: "güney", dr: 1, dc: 0 },
@@ -82,6 +82,15 @@ export const getPrimaryConnections = (
     { name: "batı", dr: 0, dc: -1 },
   ];
 
+  // Diagonal directions (secondary)
+  const secondary = [
+    { name: "kuzeydoğu", dr: -1, dc: 1 },
+    { name: "kuzeybatı", dr: -1, dc: -1 },
+    { name: "güneydoğu", dr: 1, dc: 1 },
+    { name: "güneybatı", dr: 1, dc: -1 },
+  ];
+
+  // Check 4-way connections first
   primary.forEach((dir) => {
     const newRow = row + dir.dr;
     const newCol = col + dir.dc;
@@ -96,33 +105,14 @@ export const getPrimaryConnections = (
     }
   });
 
-  return connections;
-};
-
-// NEW: Get secondary (diagonal) connections only
-export const getSecondaryConnections = (
-  row: number,
-  col: number,
-  paintedCells: Map<string, string>
-): { direction: string; row: number; col: number }[] => {
-  const walkwayColor = "#16a34a";
-  const connections: { direction: string; row: number; col: number }[] = [];
-
-  // Diagonal directions only
-  const secondary = [
-    { name: "kuzeydoğu", dr: -1, dc: 1 },
-    { name: "kuzeybatı", dr: -1, dc: -1 },
-    { name: "güneydoğu", dr: 1, dc: 1 },
-    { name: "güneybatı", dr: 1, dc: -1 },
-  ];
-
+  // Check diagonal connections only when no sharp corner exists
   secondary.forEach((dir) => {
     const newRow = row + dir.dr;
     const newCol = col + dir.dc;
     const key = coordsToKey(newRow, newCol);
 
     if (paintedCells.get(key) === walkwayColor) {
-      // Only add if it doesn't create a sharp corner
+      // Only add diagonal if it doesn't create a sharp corner
       const isSharpCorner = checkForSharpCorner(row, col, dir, paintedCells);
       if (!isSharpCorner) {
         connections.push({
@@ -135,75 +125,6 @@ export const getSecondaryConnections = (
   });
 
   return connections;
-};
-
-// Improved corner detection for all sharp corner situations
-export const checkForSharpCorners = (
-  row: number,
-  col: number,
-  paintedCells: Map<string, string>
-): boolean => {
-  const walkwayColor = "#16a34a";
-
-  // This cell must be walkway
-  if (paintedCells.get(coordsToKey(row, col)) !== walkwayColor) return false;
-
-  // Check all possible L-shaped corner situations
-  // A sharp corner occurs when we have 3 adjacent walkway cells forming an L-shape
-  const cornerPatterns = [
-    // Top-left corner: connections to right and down
-    {
-      adj1: { dr: 0, dc: 1 }, // right
-      adj2: { dr: 1, dc: 0 }, // down
-      diag: { dr: 1, dc: 1 }, // diagonal (southeast)
-    },
-    // Top-right corner: connections to left and down
-    {
-      adj1: { dr: 0, dc: -1 }, // left
-      adj2: { dr: 1, dc: 0 }, // down
-      diag: { dr: 1, dc: -1 }, // diagonal (southwest)
-    },
-    // Bottom-left corner: connections to right and up
-    {
-      adj1: { dr: 0, dc: 1 }, // right
-      adj2: { dr: -1, dc: 0 }, // up
-      diag: { dr: -1, dc: 1 }, // diagonal (northeast)
-    },
-    // Bottom-right corner: connections to left and up
-    {
-      adj1: { dr: 0, dc: -1 }, // left
-      adj2: { dr: -1, dc: 0 }, // up
-      diag: { dr: -1, dc: -1 }, // diagonal (northwest)
-    },
-  ];
-
-  // Check each corner pattern
-  for (const pattern of cornerPatterns) {
-    const adj1Cell = coordsToKey(row + pattern.adj1.dr, col + pattern.adj1.dc);
-    const adj2Cell = coordsToKey(row + pattern.adj2.dr, col + pattern.adj2.dc);
-
-    // Check if both adjacent cells are walkways (forming L-shape)
-    const adj1IsWalkway = paintedCells.get(adj1Cell) === walkwayColor;
-    const adj2IsWalkway = paintedCells.get(adj2Cell) === walkwayColor;
-
-    // If we have an L-shape (two perpendicular walkway connections)
-    if (adj1IsWalkway && adj2IsWalkway) {
-      return true; // This is a sharp corner situation
-    }
-  }
-
-  return false;
-};
-
-export const getSmartConnections = (
-  row: number,
-  col: number,
-  paintedCells: Map<string, string>
-): { direction: string; row: number; col: number }[] => {
-  // Return both primary and smart secondary connections
-  const primary = getPrimaryConnections(row, col, paintedCells);
-  const secondary = getSecondaryConnections(row, col, paintedCells);
-  return [...primary, ...secondary];
 };
 
 // Helper function to detect sharp corners
@@ -292,7 +213,7 @@ export const drawCanvasGrid = (
   ctx.globalAlpha = 1;
 };
 
-// FİX 2&3: Diagonal daha kesikli + corner indicator kalın ve belirgin
+// Simplified connection lines - just green lines for all connections
 export const drawConnectionLines = (
   ctx: CanvasRenderingContext2D,
   paintedCells: Map<string, string>,
@@ -301,10 +222,7 @@ export const drawConnectionLines = (
   gridSize: number,
   isVisible: boolean,
   zoom: number,
-  canvasOffset: { x: number; y: number },
-  showPrimary: boolean = true,
-  showSecondary: boolean = true,
-  showCorners: boolean = false
+  canvasOffset: { x: number; y: number }
 ): void => {
   if (!isVisible) return;
 
@@ -313,6 +231,11 @@ export const drawConnectionLines = (
   const visibleTop = -canvasOffset.y / zoom;
   const visibleRight = visibleLeft + canvasSize.width / zoom;
   const visibleBottom = visibleTop + canvasSize.height / zoom;
+
+  ctx.strokeStyle = "#10b981"; // Green color for all connections
+  ctx.lineWidth = 2 / zoom;
+  ctx.globalAlpha = 0.7;
+  ctx.setLineDash([]); // Solid line for all connections
 
   paintedCells.forEach((color, cellKey) => {
     if (color !== walkwayColor) return;
@@ -334,87 +257,24 @@ export const drawConnectionLines = (
       centerY + gridSize >= visibleTop &&
       centerY <= visibleBottom
     ) {
-      // Get primary (4-way) and secondary (diagonal) connections separately
-      const primaryConnections = getPrimaryConnections(row, col, paintedCells);
-      const secondaryConnections = getSecondaryConnections(
-        row,
-        col,
-        paintedCells
-      );
+      // Get all smart connections (both 4-way and diagonal when appropriate)
+      const connections = getSmartConnections(row, col, paintedCells);
 
-      // Draw primary connections (4-way) - Green, Solid
-      if (showPrimary) {
-        ctx.strokeStyle = "#10b981"; // Green
-        ctx.lineWidth = 3 / zoom;
-        ctx.globalAlpha = 0.7;
-        ctx.setLineDash([]); // Solid line
+      connections.forEach((adj) => {
+        const { x: adjX, y: adjY } = gridToCanvasCoords(
+          adj.row,
+          adj.col,
+          gridOffset,
+          gridSize
+        );
+        const adjCenterX = adjX + gridSize / 2;
+        const adjCenterY = adjY + gridSize / 2;
 
-        primaryConnections.forEach((adj) => {
-          const { x: adjX, y: adjY } = gridToCanvasCoords(
-            adj.row,
-            adj.col,
-            gridOffset,
-            gridSize
-          );
-          const adjCenterX = adjX + gridSize / 2;
-          const adjCenterY = adjY + gridSize / 2;
-
-          ctx.beginPath();
-          ctx.moveTo(cellCenterX, cellCenterY);
-          ctx.lineTo(adjCenterX, adjCenterY);
-          ctx.stroke();
-        });
-      }
-
-      // Draw secondary connections - Orange dashed for visibility
-      if (showSecondary) {
-        ctx.strokeStyle = "#ea580c"; // Orange instead of green
-        ctx.lineWidth = 2 / zoom; // Slightly thinner
-        ctx.globalAlpha = 0.8; // More visible
-        ctx.setLineDash([3, 4]); // Shorter dashes for subtlety
-
-        secondaryConnections.forEach((adj) => {
-          const { x: adjX, y: adjY } = gridToCanvasCoords(
-            adj.row,
-            adj.col,
-            gridOffset,
-            gridSize
-          );
-          const adjCenterX = adjX + gridSize / 2;
-          const adjCenterY = adjY + gridSize / 2;
-
-          ctx.beginPath();
-          ctx.moveTo(cellCenterX, cellCenterY);
-          ctx.lineTo(adjCenterX, adjCenterY);
-          ctx.stroke();
-        });
-
-        ctx.setLineDash([]); // Reset line dash
-      }
-
-      // Corner indicators - More subtle
-      if (showCorners) {
-        const hasSharpCorner = checkForSharpCorners(row, col, paintedCells);
-        if (hasSharpCorner) {
-          ctx.strokeStyle = "#fbbf24"; // Yellow instead of red
-          ctx.lineWidth = 2 / zoom; // Thinner line
-          ctx.globalAlpha = 0.7; // More transparent
-          ctx.setLineDash([]); // Solid line
-
-          // Draw subtle border around the cell
-          const borderOffset = 3;
-          ctx.strokeRect(
-            centerX + borderOffset,
-            centerY + borderOffset,
-            gridSize - borderOffset * 2,
-            gridSize - borderOffset * 2
-          );
-
-          // Add a small yellow corner marker
-          ctx.fillStyle = "#fbbf24";
-          ctx.fillRect(centerX + 2, centerY + 2, 4 / zoom, 4 / zoom);
-        }
-      }
+        ctx.beginPath();
+        ctx.moveTo(cellCenterX, cellCenterY);
+        ctx.lineTo(adjCenterX, adjCenterY);
+        ctx.stroke();
+      });
     }
   });
 
@@ -484,7 +344,7 @@ export const drawPaintedCells = (
           ctx.fillText("?", drawX + gridSize / 2, drawY + gridSize / 2);
         }
       }
-      // FİX 6: POI indicator - simge üstte, label altta
+      // POI indicator - simge üstte, label altta
       else if (cellColor === "#dc2626") {
         if (hasLabel) {
           // Show POI symbol in upper part
@@ -537,7 +397,7 @@ export const drawPaintedCells = (
   });
 };
 
-// FİX 6: Cell labels drawing with POI special positioning
+// Cell labels drawing with POI special positioning
 export const drawCellLabels = (
   ctx: CanvasRenderingContext2D,
   cellLabels: Map<string, string[]>,
@@ -591,7 +451,7 @@ export const drawCellLabels = (
 
       ctx.fillStyle = hasBackground ? getContrastColor(cellColor) : labelColor;
 
-      // FİX 6: POI labels in lower part to avoid overlap with 📍 symbol
+      // POI labels in lower part to avoid overlap with 📍 symbol
       if (isPOI) {
         // Position label in the lower 70% of the cell
         ctx.fillText(labelText, drawX + gridSize / 2, drawY + gridSize * 0.75);
@@ -603,12 +463,12 @@ export const drawCellLabels = (
   });
 };
 
-// NEW: Export canvas as PNG
+// Export canvas as PNG
 export const exportCanvasToPNG = (canvas: HTMLCanvasElement): string => {
   return canvas.toDataURL("image/png");
 };
 
-// NEW: CSV Export Functions
+// CSV Export Functions
 
 export const generateNavigationGridCSV = (
   floors: Map<string, FloorData>,
@@ -860,7 +720,7 @@ export const generateVerticalConnectionsCSV = (
   return csvContent.join("\n");
 };
 
-// NEW: Download CSV file utility
+// Download CSV file utility
 export const downloadCSV = (content: string, filename: string): void => {
   const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
@@ -876,7 +736,7 @@ export const downloadCSV = (content: string, filename: string): void => {
   }
 };
 
-// NEW: Download PNG file utility
+// Download PNG file utility
 export const downloadPNG = (dataUrl: string, filename: string): void => {
   const link = document.createElement("a");
   link.download = filename;
