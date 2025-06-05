@@ -1,10 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
 import { Icons } from "./Icons";
 import { styles } from "../styles/styles";
+import { POI_CATEGORIES } from "../utils/constants";
 
 export interface Color {
   name: string;
   value: string;
+  category?: string;
+  defaultLabel?: string;
 }
 
 interface ColorPaletteProps {
@@ -26,6 +29,45 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
   onCreatePreset,
   colorPresets,
 }) => {
+  // FİX 4: Custom colors state
+  const [customColors, setCustomColors] = useState<Color[]>([]);
+  const [newColorName, setNewColorName] = useState("");
+  const [newColorValue, setNewColorValue] = useState("#000000");
+  const [showAddColorForm, setShowAddColorForm] = useState(false);
+
+  // FİX 4: Add custom color function
+  const handleAddCustomColor = () => {
+    if (newColorName.trim()) {
+      const newColor: Color = {
+        name: newColorName.trim(),
+        value: newColorValue,
+        category: "custom",
+      };
+
+      setCustomColors((prev) => [...prev, newColor]);
+      setNewColorName("");
+      setNewColorValue("#000000");
+      setShowAddColorForm(false);
+      setPaintColor(newColorValue); // Auto-select the new color
+    }
+  };
+
+  // FİX 4: Remove custom color function
+  const handleRemoveCustomColor = (colorToRemove: Color) => {
+    setCustomColors((prev) =>
+      prev.filter(
+        (color) =>
+          !(
+            color.name === colorToRemove.name &&
+            color.value === colorToRemove.value
+          )
+      )
+    );
+  };
+
+  // Combine default colors with custom colors
+  const allColors = [...colors, ...customColors];
+
   return (
     <div style={styles.section}>
       <h3
@@ -40,11 +82,11 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
         }}
       >
         <Icons.Palette size={18} />
-        Color Palette
+        Paint Colors
       </h3>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        {/* Paint Colors */}
+        {/* Paint Colors - Vertical Compact Layout with Dynamic Scroll */}
         <div>
           <label
             style={{
@@ -54,89 +96,331 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
               display: "block",
             }}
           >
-            Paint Color:
+            Select Color:
           </label>
+
+          {/* Color List with Dynamic Scroll */}
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "16px",
-              flexWrap: "wrap",
+              backgroundColor: "#333",
+              border: "1px solid #555",
+              maxHeight: customColors.length > 5 ? "280px" : "auto",
+              overflowY: customColors.length > 5 ? "auto" : "visible",
+              marginBottom: "8px",
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                gap: "6px",
-                backgroundColor: "#333",
-                padding: "8px",
-                border: "1px solid #555",
-              }}
-            >
-              {colors.map((color) => (
-                <button
-                  key={color.value}
-                  onClick={() => setPaintColor(color.value)}
-                  style={{
-                    width: "32px",
-                    height: "32px",
-                    border:
-                      paintColor === color.value
-                        ? "2px solid #ffffff"
-                        : "1px solid #666",
-                    backgroundColor: color.value,
-                    cursor: "pointer",
-                    transform:
-                      paintColor === color.value ? "scale(1.1)" : "scale(1)",
-                    transition: "all 0.2s ease",
-                    position: "relative",
-                  }}
-                  title={`${color.name}${
-                    colorPresets.has(color.value) ? " (Has preset)" : ""
-                  }`}
-                >
-                  {colorPresets.has(color.value) && (
+            {/* Default Navigation Colors */}
+            <div style={{ padding: "8px" }}>
+              <div
+                style={{
+                  color: "#10b981",
+                  fontSize: "11px",
+                  fontWeight: "600",
+                  marginBottom: "6px",
+                }}
+              >
+                NAVIGATION COLORS
+              </div>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: "4px" }}
+              >
+                {colors.map((color) => (
+                  <button
+                    key={color.value}
+                    onClick={() => setPaintColor(color.value)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 8px",
+                      border:
+                        paintColor === color.value
+                          ? "2px solid #ffffff"
+                          : "1px solid #666",
+                      backgroundColor: "#404040",
+                      cursor: "pointer",
+                      fontSize: "11px",
+                      fontWeight: "500",
+                      color: "#ffffff",
+                      transition: "all 0.2s ease",
+                      position: "relative",
+                    }}
+                    title={`${color.name}${
+                      colorPresets.has(color.value) ? " (Has preset)" : ""
+                    }`}
+                  >
                     <div
                       style={{
-                        position: "absolute",
-                        top: "2px",
-                        right: "2px",
-                        width: "6px",
-                        height: "6px",
-                        backgroundColor: "#ffd700",
-                        borderRadius: "50%",
+                        width: "16px",
+                        height: "16px",
+                        backgroundColor: color.value,
+                        border: "1px solid rgba(255,255,255,0.3)",
+                        flexShrink: 0,
                       }}
                     />
-                  )}
-                </button>
-              ))}
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: "500",
+                        flex: 1,
+                        textAlign: "left",
+                      }}
+                    >
+                      {color.name}
+                    </span>
+
+                    {colorPresets.has(color.value) && (
+                      <div
+                        style={{
+                          width: "6px",
+                          height: "6px",
+                          backgroundColor: "#ffd700",
+                          borderRadius: "50%",
+                        }}
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* FİX 4: Custom Colors Section */}
+            {customColors.length > 0 && (
+              <div style={{ padding: "8px", borderTop: "1px solid #555" }}>
+                <div
+                  style={{
+                    color: "#fbbf24",
+                    fontSize: "11px",
+                    fontWeight: "600",
+                    marginBottom: "6px",
+                  }}
+                >
+                  CUSTOM COLORS
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                  }}
+                >
+                  {customColors.map((color, index) => (
+                    <div
+                      key={`${color.value}-${index}`}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        position: "relative",
+                      }}
+                    >
+                      <button
+                        onClick={() => setPaintColor(color.value)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          padding: "6px 8px",
+                          border:
+                            paintColor === color.value
+                              ? "2px solid #ffffff"
+                              : "1px solid #666",
+                          backgroundColor: "#404040",
+                          cursor: "pointer",
+                          fontSize: "11px",
+                          fontWeight: "500",
+                          color: "#ffffff",
+                          transition: "all 0.2s ease",
+                          flex: 1,
+                        }}
+                        title={`${color.name}${
+                          colorPresets.has(color.value) ? " (Has preset)" : ""
+                        }`}
+                      >
+                        <div
+                          style={{
+                            width: "16px",
+                            height: "16px",
+                            backgroundColor: color.value,
+                            border: "1px solid rgba(255,255,255,0.3)",
+                            flexShrink: 0,
+                          }}
+                        />
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: "500",
+                            flex: 1,
+                            textAlign: "left",
+                          }}
+                        >
+                          {color.name}
+                        </span>
+
+                        {colorPresets.has(color.value) && (
+                          <div
+                            style={{
+                              width: "6px",
+                              height: "6px",
+                              backgroundColor: "#ffd700",
+                              borderRadius: "50%",
+                            }}
+                          />
+                        )}
+                      </button>
+
+                      {/* Remove button for custom colors */}
+                      <button
+                        onClick={() => handleRemoveCustomColor(color)}
+                        style={{
+                          backgroundColor: "#dc2626",
+                          border: "1px solid #b91c1c",
+                          color: "#ffffff",
+                          padding: "4px",
+                          cursor: "pointer",
+                          fontSize: "10px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                        title="Remove custom color"
+                      >
+                        <Icons.X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* FİX 4: Custom Color + Create Preset + Add Custom */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <input
                 type="color"
                 value={paintColor}
                 onChange={(e) => setPaintColor(e.target.value)}
                 style={{
                   width: "32px",
-                  height: "32px",
+                  height: "24px",
                   border: "1px solid #666",
                   cursor: "pointer",
                   backgroundColor: "transparent",
                 }}
-                title="Custom Color"
+                title="Pick Custom Color"
               />
+
+              <button
+                onClick={onCreatePreset}
+                style={{
+                  ...styles.button,
+                  ...styles.primaryButton,
+                  fontSize: "10px",
+                  padding: "6px 8px",
+                  flex: 1,
+                }}
+              >
+                <Icons.Tag size={12} />
+                Preset
+              </button>
+
+              {/* FİX 4: Add Custom Color Button */}
+              <button
+                onClick={() => setShowAddColorForm(!showAddColorForm)}
+                style={{
+                  ...styles.button,
+                  backgroundColor: showAddColorForm ? "#fbbf24" : "#ea580c",
+                  borderColor: showAddColorForm ? "#f59e0b" : "#c2410c",
+                  fontSize: "10px",
+                  padding: "6px 8px",
+                }}
+                title="Add Custom Color"
+              >
+                <Icons.Plus size={12} />
+              </button>
             </div>
 
-            <button
-              onClick={onCreatePreset}
-              style={{
-                ...styles.button,
-                ...styles.primaryButton,
-                fontSize: "12px",
-                padding: "8px 12px",
-              }}
-            >
-              <Icons.Tag size={14} />
-              Create Preset
-            </button>
+            {/* FİX 4: Add Custom Color Form */}
+            {showAddColorForm && (
+              <div
+                style={{
+                  backgroundColor: "#1f2937",
+                  padding: "12px",
+                  border: "1px solid #374151",
+                  borderRadius: "4px",
+                }}
+              >
+                <div
+                  style={{
+                    color: "#fbbf24",
+                    fontSize: "11px",
+                    fontWeight: "600",
+                    marginBottom: "8px",
+                  }}
+                >
+                  ADD CUSTOM COLOR
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "6px",
+                  }}
+                >
+                  <input
+                    type="text"
+                    placeholder="Color name"
+                    value={newColorName}
+                    onChange={(e) => setNewColorName(e.target.value)}
+                    style={{
+                      ...styles.input,
+                      fontSize: "11px",
+                      padding: "6px 8px",
+                      width: "100%",
+                    }}
+                  />
+                  <div style={{ display: "flex", gap: "6px" }}>
+                    <input
+                      type="color"
+                      value={newColorValue}
+                      onChange={(e) => setNewColorValue(e.target.value)}
+                      style={{
+                        width: "40px",
+                        height: "28px",
+                        border: "1px solid #666",
+                        cursor: "pointer",
+                        backgroundColor: "transparent",
+                      }}
+                    />
+                    <button
+                      onClick={handleAddCustomColor}
+                      disabled={!newColorName.trim()}
+                      style={{
+                        ...styles.button,
+                        ...styles.successButton,
+                        fontSize: "11px",
+                        padding: "6px 12px",
+                        flex: 1,
+                        opacity: !newColorName.trim() ? 0.5 : 1,
+                      }}
+                    >
+                      Add
+                    </button>
+                    <button
+                      onClick={() => setShowAddColorForm(false)}
+                      style={{
+                        ...styles.button,
+                        fontSize: "11px",
+                        padding: "6px 8px",
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -165,8 +449,8 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
                 backgroundColor: "transparent",
               }}
             />
-            <span style={{ color: "#ccc", fontSize: "14px" }}>
-              Selected: {labelColor}
+            <span style={{ color: "#ccc", fontSize: "12px" }}>
+              {labelColor}
             </span>
           </div>
         </div>
@@ -182,19 +466,40 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
           <div
             style={{
               display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
+              flexDirection: "column",
+              gap: "6px",
               fontSize: "14px",
             }}
           >
-            <span style={{ fontWeight: "500", color: "#ffffff" }}>
-              Paint:{" "}
-              {colors.find((c) => c.value === paintColor)?.name || paintColor}
-            </span>
-            {colorPresets.has(paintColor) && (
-              <span style={{ color: "#ffd700", fontSize: "12px" }}>
-                Preset: {colorPresets.get(paintColor)?.join(", ")}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span
+                style={{
+                  fontWeight: "500",
+                  color: "#ffffff",
+                  fontSize: "12px",
+                }}
+              >
+                Paint:{" "}
+                {allColors.find((c) => c.value === paintColor)?.name ||
+                  paintColor}
               </span>
+              {colorPresets.has(paintColor) && (
+                <span style={{ color: "#ffd700", fontSize: "11px" }}>
+                  Preset
+                </span>
+              )}
+            </div>
+
+            {colorPresets.has(paintColor) && (
+              <div style={{ color: "#ffd700", fontSize: "11px" }}>
+                Labels: {colorPresets.get(paintColor)?.join(", ")}
+              </div>
             )}
           </div>
         </div>
