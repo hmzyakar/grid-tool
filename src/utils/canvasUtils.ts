@@ -66,6 +66,7 @@ export const resizeImageToFit = (
 };
 
 // Get smart connections - both 4-way and diagonal
+// Get smart connections - 4-way priority, diagonal as fallback only
 export const getSmartConnections = (
   row: number,
   col: number,
@@ -74,7 +75,7 @@ export const getSmartConnections = (
   const walkwayColor = "#16a34a";
   const connections: { direction: string; row: number; col: number }[] = [];
 
-  // 4-way directions (primary)
+  // 4-way directions (primary - always preferred)
   const primary = [
     { name: "kuzey", dr: -1, dc: 0 },
     { name: "güney", dr: 1, dc: 0 },
@@ -82,7 +83,7 @@ export const getSmartConnections = (
     { name: "batı", dr: 0, dc: -1 },
   ];
 
-  // Diagonal directions (secondary)
+  // Diagonal directions (fallback only)
   const secondary = [
     { name: "kuzeydoğu", dr: -1, dc: 1 },
     { name: "kuzeybatı", dr: -1, dc: -1 },
@@ -90,7 +91,7 @@ export const getSmartConnections = (
     { name: "güneybatı", dr: 1, dc: -1 },
   ];
 
-  // Check 4-way connections first
+  // Always add 4-way connections first
   primary.forEach((dir) => {
     const newRow = row + dir.dr;
     const newCol = col + dir.dc;
@@ -105,16 +106,24 @@ export const getSmartConnections = (
     }
   });
 
-  // Check diagonal connections only when no sharp corner exists
+  // Add diagonal connections ONLY if no 4-way path exists to that cell
   secondary.forEach((dir) => {
     const newRow = row + dir.dr;
     const newCol = col + dir.dc;
     const key = coordsToKey(newRow, newCol);
 
     if (paintedCells.get(key) === walkwayColor) {
-      // Only add diagonal if it doesn't create a sharp corner
-      const isSharpCorner = checkForSharpCorner(row, col, dir, paintedCells);
-      if (!isSharpCorner) {
+      // Check if this diagonal destination can be reached via 4-way path
+      const canReachVia4Way = canReachDiagonalVia4Way(
+        row,
+        col,
+        newRow,
+        newCol,
+        paintedCells
+      );
+
+      // Only add diagonal if 4-way path doesn't exist
+      if (!canReachVia4Way) {
         connections.push({
           direction: dir.name,
           row: newRow,
@@ -125,6 +134,37 @@ export const getSmartConnections = (
   });
 
   return connections;
+};
+
+// Helper function to check if diagonal destination is reachable via 4-way movement
+const canReachDiagonalVia4Way = (
+  fromRow: number,
+  fromCol: number,
+  toRow: number,
+  toCol: number,
+  paintedCells: Map<string, string>
+): boolean => {
+  const walkwayColor = "#16a34a";
+
+  // Calculate the difference
+  const deltaRow = toRow - fromRow;
+  const deltaCol = toCol - fromCol;
+
+  // For diagonal movement, check both possible 4-way paths
+  // Path 1: Move row first, then column
+  const path1Row = fromRow + deltaRow;
+  const path1Col = fromCol;
+  const path1Key = coordsToKey(path1Row, path1Col);
+  const path1Valid = paintedCells.get(path1Key) === walkwayColor;
+
+  // Path 2: Move column first, then row
+  const path2Row = fromRow;
+  const path2Col = fromCol + deltaCol;
+  const path2Key = coordsToKey(path2Row, path2Col);
+  const path2Valid = paintedCells.get(path2Key) === walkwayColor;
+
+  // If either 4-way path exists, diagonal is not needed
+  return path1Valid || path2Valid;
 };
 
 // Helper function to detect sharp corners
