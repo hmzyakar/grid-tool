@@ -1227,15 +1227,15 @@ const GridPainter: React.FC = () => {
       <div style={styles.container}>
         <div style={styles.mainCard}>
           <h1 style={styles.title}>
-            <Icons.Palette
+            <Icons.Navigation
               size={32}
               style={{ verticalAlign: "middle", marginRight: "12px" }}
             />
-            Grid Painter
+            Indoor Navigation Builder
           </h1>
 
           {/* Import Section */}
-          <div style={styles.section}>
+          <div style={{ ...styles.section, textAlign: "center" }}>
             <h3
               style={{
                 fontSize: "16px",
@@ -1243,6 +1243,7 @@ const GridPainter: React.FC = () => {
                 color: "#ffffff",
                 marginBottom: "16px",
                 display: "flex",
+                justifyContent: "center",
                 alignItems: "center",
                 gap: "8px",
               }}
@@ -1251,7 +1252,14 @@ const GridPainter: React.FC = () => {
               Import Project
             </h3>
 
-            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+            <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                flexWrap: "wrap",
+                justifyContent: "center",
+              }}
+            >
               <input
                 type="file"
                 accept=".json"
@@ -1262,7 +1270,7 @@ const GridPainter: React.FC = () => {
               <label
                 htmlFor="jsonImport"
                 style={{ ...styles.button, ...styles.primaryButton }}
-                title="Import JSON project file (.json) exported from Grid Painter. This will restore all floors, settings, and painted data."
+                title="Import JSON project file (.json) exported from Indoor Navigation Builder. This will restore all floors, settings, and painted data."
               >
                 <Icons.FileText size={16} />
                 Import Project (.json)
@@ -1474,7 +1482,7 @@ const GridPainter: React.FC = () => {
 
           {/* Image Upload Section - Floor specific */}
           {currentFloor && (
-            <div style={styles.section}>
+            <div style={{ ...styles.section, textAlign: "center" }}>
               <h3
                 style={{
                   fontSize: "16px",
@@ -1482,6 +1490,7 @@ const GridPainter: React.FC = () => {
                   color: "#ffffff",
                   marginBottom: "16px",
                   display: "flex",
+                  justifyContent: "center",
                   alignItems: "center",
                   gap: "8px",
                 }}
@@ -1495,6 +1504,7 @@ const GridPainter: React.FC = () => {
                   display: "flex",
                   gap: "12px",
                   flexWrap: "wrap",
+                  justifyContent: "center",
                   alignItems: "center",
                 }}
               >
@@ -1869,7 +1879,7 @@ const GridPainter: React.FC = () => {
                 marginBottom: "12px",
               }}
             >
-              How to Use Grid Painter:
+              How to Use Indoor Navigation Builder:
             </h3>
             <ul
               style={{

@@ -102,7 +102,7 @@ export const FloorManagement: React.FC<FloorManagementProps> = ({
               marginBottom: "8px",
             }}
           >
-            🚀 Welcome to Grid Painter!
+            Welcome to Indoor Navigation Builder!
           </div>
           <p style={{ color: "#ccc", marginBottom: "24px", fontSize: "14px" }}>
             Start by creating your first floor to begin mapping your indoor
@@ -121,7 +121,7 @@ export const FloorManagement: React.FC<FloorManagementProps> = ({
           >
             <input
               type="text"
-              placeholder="Floor name (e.g., Ground Floor, Lobby)"
+              placeholder="Floor name (e.g., Ground Floor)"
               value={newFloorName}
               onChange={(e) => setNewFloorName(e.target.value)}
               style={{
